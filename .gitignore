@@ -1,0 +1,14 @@
+target/
+*/target/
+
+.idea/
+*.iml
+
+.mvn/wrapper/maven-wrapper.jar
+
+*.log
+
+.env
+.env.*
+
+!.env.example

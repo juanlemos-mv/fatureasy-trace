@@ -21,6 +21,122 @@
     </header>
 
     <main class="content">
+        <section class="search-panel">
+            <input
+                    class="search-input"
+                    type="text"
+                    placeholder="Buscar por lote, protocolo, cliente, operadora ou job..."
+            >
+            <button class="primary-button">Buscar</button>
+        </section>
+
+        <section class="summary-grid">
+            <article class="summary-card">
+                <span class="summary-label">Agents online</span>
+                <strong class="summary-value">18</strong>
+                <span class="summary-note">2 offline</span>
+            </article>
+
+            <article class="summary-card">
+                <span class="summary-label">Jobs pendentes</span>
+                <strong class="summary-value">27</strong>
+                <span class="summary-note">8 acima do SLA</span>
+            </article>
+
+            <article class="summary-card danger">
+                <span class="summary-label">Falhas críticas</span>
+                <strong class="summary-value">5</strong>
+                <span class="summary-note">requer ação</span>
+            </article>
+
+            <article class="summary-card warning">
+                <span class="summary-label">Protocolos sem retorno</span>
+                <strong class="summary-value">14</strong>
+                <span class="summary-note">últimas 24h</span>
+            </article>
+        </section>
+
+        <section class="dashboard-grid">
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Atenção agora</h2>
+                    <span>Casos que precisam investigação</span>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Fluxo</th>
+                        <th>Problema provável</th>
+                        <th>Última etapa</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Hospital Santa Clara</td>
+                        <td>Billing / Lote</td>
+                        <td><span class="status danger">Agent não processou</span></td>
+                        <td>Job criado</td>
+                    </tr>
+                    <tr>
+                        <td>Hospital Norte</td>
+                        <td>Billing / Lote</td>
+                        <td><span class="status warning">Operadora rejeitou XML</span></td>
+                        <td>Envio operadora</td>
+                    </tr>
+                    <tr>
+                        <td>Clínica Vida</td>
+                        <td>Protocolo</td>
+                        <td><span class="status neutral">Sem retorno</span></td>
+                        <td>XML enviado</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Saúde dos ambientes</h2>
+                    <span>Status por cliente</span>
+                </div>
+
+                <table class="data-table compact">
+                    <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Agent</th>
+                        <th>Backend</th>
+                        <th>Banco MV</th>
+                        <th>Heartbeat</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Hospital Santa Clara</td>
+                        <td><span class="status danger">Offline</span></td>
+                        <td><span class="status success">OK</span></td>
+                        <td><span class="status neutral">Não testado</span></td>
+                        <td>42 min atrás</td>
+                    </tr>
+                    <tr>
+                        <td>Hospital Norte</td>
+                        <td><span class="status success">Online</span></td>
+                        <td><span class="status success">OK</span></td>
+                        <td><span class="status success">OK</span></td>
+                        <td>1 min atrás</td>
+                    </tr>
+                    <tr>
+                        <td>Clínica Vida</td>
+                        <td><span class="status success">Online</span></td>
+                        <td><span class="status success">OK</span></td>
+                        <td><span class="status warning">Instável</span></td>
+                        <td>6 min atrás</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </section>
     </main>
 </div>
 </body>

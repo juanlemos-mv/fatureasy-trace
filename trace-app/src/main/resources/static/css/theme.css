@@ -1,0 +1,107 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --trace-background: #102A3C;
+    --trace-surface: #0f2535;
+    --trace-surface-raised: #15364b;
+    --trace-primary: #214B63;
+    --trace-secondary: #20739A;
+    --trace-primary-light: #a9c8e7;
+    --trace-component-light: #EFFAFC;
+    --trace-sidebar-text: #79BDDC;
+    --trace-text: #f4fbfd;
+    --trace-text-muted: #d5e3ea;
+    --trace-text-soft: #b7ccd7;
+    --trace-white: #ffffff;
+    --trace-danger: #ff0000;
+    --trace-warning: #edb902;
+    --trace-success: #00bd35;
+    --trace-danger-bg: #8a0000;
+    --trace-warning-bg: #7a5e00;
+    --trace-success-bg: #006a1e;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--trace-background);
+    color: var(--trace-text);
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+.primary-button {
+    border: 0;
+    border-radius: 6px;
+    padding: 9px 14px;
+    background: var(--trace-secondary);
+    color: var(--trace-white);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primary-button:hover {
+    background: var(--trace-primary);
+}
+
+.secondary-button {
+    border: 1px solid var(--trace-secondary);
+    border-radius: 6px;
+    padding: 9px 14px;
+    background: transparent;
+    color: var(--trace-white);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.secondary-button:hover {
+    background: var(--trace-surface-raised);
+}
+
+.context-pill {
+    padding: 8px 12px;
+    border: 1px solid var(--trace-secondary);
+    border-radius: 6px;
+    background: var(--trace-surface-raised);
+    font-size: 13px;
+    color: var(--trace-text);
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status.success {
+    color: #D9F5E1;
+    background: var(--trace-success-bg);
+}
+
+.status.warning {
+    color: #FCF5D9;
+    background: var(--trace-warning-bg);
+}
+
+.status.danger {
+    color: #FFD9D9;
+    background: var(--trace-danger-bg);
+}
+
+.status.neutral {
+    color: var(--trace-text);
+    background: var(--trace-surface-raised);
+}

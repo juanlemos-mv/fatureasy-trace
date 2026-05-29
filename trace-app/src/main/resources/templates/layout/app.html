@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org" th:fragment="app(title, activeMenu, pageStyles, pageContent)">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">Fatureasy Trace</title>
+    <link rel="stylesheet" href="/css/theme.css" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" href="/css/layout.css" th:href="@{/css/layout.css}">
+    <th:block th:replace="${pageStyles}"></th:block>
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <strong>Fatureasy Trace</strong>
+            <span>Governan&ccedil;a de tarefas</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="sidebar-link" th:classappend="${activeMenu == 'home'} ? ' selected' : ''" href="/" th:href="@{/}">Dashboard</a>
+            <span class="sidebar-link disabled">Quadros</span>
+            <span class="sidebar-link disabled">Pessoas</span>
+            <span class="sidebar-link disabled">Automa&ccedil;&otilde;es</span>
+            <span class="sidebar-link disabled">Configura&ccedil;&otilde;es</span>
+        </nav>
+    </aside>
+
+    <div class="app-main">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1 th:text="${title}">Fatureasy Trace</h1>
+                <p>Controle de tarefas, respons&aacute;veis e fluxo de entrega</p>
+            </div>
+
+            <div class="topbar-actions">
+                <span class="context-pill">Fonte: JSON manual</span>
+                <span class="context-pill">Ambiente: Local</span>
+            </div>
+        </header>
+
+        <main class="content">
+            <th:block th:replace="${pageContent}"></th:block>
+        </main>
+    </div>
+</div>
+</body>
+</html>

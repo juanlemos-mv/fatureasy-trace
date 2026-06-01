@@ -49,6 +49,22 @@
         <button id="exportCsv" class="secondary-button" type="button">Exportar CSV</button>
     </section>
 
+    <section id="activeFilterPanel" class="active-filter-panel hidden">
+        <div>
+            <span class="section-kicker">Recorte atual</span>
+            <h2 id="activeFilterTitle">Quadro inteiro</h2>
+            <div id="activeFilterChips" class="filter-chip-list"></div>
+        </div>
+        <div class="active-filter-actions">
+            <div id="sharedIndicator" class="shared-indicator">
+                <span>Cards em conjunto</span>
+                <strong>0</strong>
+                <small>no recorte atual</small>
+            </div>
+            <button id="clearScope" class="secondary-button" type="button">Voltar ao quadro inteiro</button>
+        </div>
+    </section>
+
     <section class="summary-grid">
         <article class="summary-card" data-summary="Total no JSON">
             <span class="summary-label">Total no JSON</span>
@@ -103,6 +119,7 @@
                     <strong id="managerDeliveryPercent">0%</strong>
                     <span>entrega no recorte</span>
                 </div>
+                <button id="managerClearScope" class="secondary-button" type="button">Voltar ao quadro inteiro</button>
             </section>
 
             <section class="manager-kpi-grid">

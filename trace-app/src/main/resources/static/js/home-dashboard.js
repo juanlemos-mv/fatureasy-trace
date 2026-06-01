@@ -1,5 +1,6 @@
 (function () {
     const STORAGE_KEY = 'fatureasy.trace.dashboard';
+    const MANAGER_MODE_KEY = 'fatureasy.trace.managerMode';
     const WITHOUT_OWNER = 'Sem responsavel';
 
     const importForm = document.getElementById('importForm');
@@ -12,6 +13,12 @@
     const managerViewToggle = document.getElementById('managerViewToggle');
     const managerView = document.getElementById('managerView');
     const operationalView = document.getElementById('operationalView');
+    const activeFilterPanel = document.getElementById('activeFilterPanel');
+    const activeFilterTitle = document.getElementById('activeFilterTitle');
+    const activeFilterChips = document.getElementById('activeFilterChips');
+    const sharedIndicator = document.getElementById('sharedIndicator');
+    const clearScope = document.getElementById('clearScope');
+    const managerClearScope = document.getElementById('managerClearScope');
     const managerScope = document.getElementById('managerScope');
     const managerDeliveryPercent = document.getElementById('managerDeliveryPercent');
     const managerDone = document.getElementById('managerDone');
@@ -44,7 +51,7 @@
     const summaryCards = Array.from(document.querySelectorAll('[data-summary]'));
 
     let dashboard = emptyDashboard();
-    let managerMode = false;
+    let managerMode = localStorage.getItem(MANAGER_MODE_KEY) === 'true';
 
     importForm.addEventListener('submit', event => {
         event.preventDefault();
@@ -80,12 +87,31 @@
         applyFilters();
     });
 
+    clearScope.addEventListener('click', () => {
+        resetFilters();
+        applyFilters();
+    });
+
+    managerClearScope.addEventListener('click', () => {
+        resetFilters();
+        applyFilters();
+    });
+
     exportCsv.addEventListener('click', exportFilteredCsv);
 
     managerViewToggle.addEventListener('click', () => {
-        managerMode = !managerMode;
-        updateViewMode();
+        setManagerMode(!managerMode);
         applyFilters();
+    });
+
+    document.addEventListener('click', event => {
+        const personTrigger = event.target.closest('[data-person-filter]');
+
+        if (!personTrigger) {
+            return;
+        }
+
+        applyPersonFilter(personTrigger.dataset.personFilter);
     });
 
     actionList.addEventListener('click', event => {
@@ -303,6 +329,7 @@
         const doing = filteredRows.filter(row => listGroup(row.dataset.list) === 'doing').length;
         const done = filteredRows.filter(row => listGroup(row.dataset.list) === 'done').length;
 
+        renderActiveFilters(filteredRows);
         updateSummary('Total no JSON', dashboard.cards.length, dashboard.imported ? 'cards abertos no arquivo importado' : 'importe um JSON para iniciar', '');
         updateSummary('Resultado do filtro', filteredRows.length, dashboard.imported ? 'cards que batem com os filtros atuais' : 'sem dados importados', '');
         updateSummary('Sem responsavel no filtro', withoutOwner, dashboard.imported ? 'cards filtrados sem dono' : 'sem dados importados', withoutOwner > 0 ? 'danger' : 'neutral');
@@ -314,6 +341,63 @@
         renderPeople(filteredRows);
         renderTypes(filteredRows);
         renderManagerView(filteredRows);
+    }
+
+    function renderActiveFilters(filteredRows) {
+        activeFilterPanel.classList.toggle('hidden', !dashboard.imported);
+
+        if (!dashboard.imported) {
+            activeFilterTitle.textContent = 'Quadro inteiro';
+            activeFilterChips.innerHTML = '';
+            return;
+        }
+
+        const filters = activeFilterItems();
+        const shared = countShared(filteredRows);
+
+        activeFilterTitle.textContent = filters.length
+            ? 'Filtros aplicados ao painel'
+            : 'Quadro inteiro';
+        activeFilterChips.innerHTML = filters.length
+            ? filters.map(filter => `
+                <span class="filter-chip">
+                    <strong>${escapeHtml(filter.label)}</strong>
+                    ${escapeHtml(filter.value)}
+                </span>
+            `).join('')
+            : '<span class="filter-chip empty">Nenhum filtro ativo</span>';
+        sharedIndicator.classList.toggle('active', shared > 0);
+        sharedIndicator.innerHTML = `
+            <span>Cards em conjunto</span>
+            <strong>${shared}</strong>
+            <small>no recorte atual</small>
+        `;
+    }
+
+    function activeFilterItems() {
+        const filters = [];
+
+        if (searchInput.value.trim()) {
+            filters.push({ label: 'Busca', value: searchInput.value.trim() });
+        }
+
+        if (personFilter.value) {
+            filters.push({ label: 'Responsavel', value: personFilter.value });
+        }
+
+        if (listFilter.value) {
+            filters.push({ label: 'Lista', value: listFilter.value });
+        }
+
+        if (typeFilter.value) {
+            filters.push({ label: 'Tipo', value: typeFilter.value });
+        }
+
+        if (withoutOwnerFilter.checked) {
+            filters.push({ label: 'Filtro', value: 'Sem responsavel' });
+        }
+
+        return filters;
     }
 
     function renderQuickActions() {
@@ -438,7 +522,7 @@
         const max = Math.max(...rows.map(row => row[1]), 1);
 
         peopleChart.innerHTML = rows.length
-            ? rows.map(([name, total]) => chartBar(name, total, max, 'secondary')).join('')
+            ? rows.map(([name, total]) => personChartBar(name, total, max)).join('')
             : emptyChart('Nenhum responsavel no filtro.');
     }
 
@@ -499,6 +583,22 @@
         `;
     }
 
+    function personChartBar(name, total, max) {
+        const width = Math.max(Math.round((total / max) * 100), total > 0 ? 4 : 0);
+
+        return `
+            <button class="chart-row person-chart-row" type="button" data-person-filter="${escapeHtml(name)}">
+                <div class="chart-row-label">
+                    <span>${escapeHtml(name)}</span>
+                    <strong>${total}</strong>
+                </div>
+                <div class="chart-track">
+                    <span class="chart-fill secondary" style="width: ${width}%"></span>
+                </div>
+            </button>
+        `;
+    }
+
     function emptyChart(message) {
         return `<div class="chart-empty">${message}</div>`;
     }
@@ -527,7 +627,7 @@
             .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
             .map(([name, person]) => `
                 <tr>
-                    <td>${escapeHtml(name)}</td>
+                    <td><button class="person-filter-button" type="button" data-person-filter="${escapeHtml(name)}">${escapeHtml(name)}</button></td>
                     <td>${person.total}</td>
                     <td>${person.backlog}</td>
                     <td>${person.todo}</td>
@@ -629,7 +729,7 @@
 
                 return `
                     <tr>
-                        <td>${escapeHtml(name)}</td>
+                        <td><button class="person-filter-button" type="button" data-person-filter="${escapeHtml(name)}">${escapeHtml(name)}</button></td>
                         <td>${person.total}</td>
                         <td>${person.done}</td>
                         <td>${person.doing}</td>
@@ -748,11 +848,28 @@
         withoutOwnerFilter.checked = false;
     }
 
+    function setManagerMode(active) {
+        managerMode = active;
+        localStorage.setItem(MANAGER_MODE_KEY, String(managerMode));
+        updateViewMode();
+    }
+
     function updateViewMode() {
         managerView.classList.toggle('hidden', !managerMode);
         operationalView.classList.toggle('hidden', managerMode);
         managerViewToggle.textContent = managerMode ? 'Voltar para visao operacional' : 'Ativar visao gerencial';
         managerViewToggle.classList.toggle('active', managerMode);
+    }
+
+    function applyPersonFilter(person) {
+        if (!person) {
+            return;
+        }
+
+        searchInput.value = '';
+        withoutOwnerFilter.checked = false;
+        personFilter.value = person;
+        applyFilters();
     }
 
     function applyQuickAction(action) {

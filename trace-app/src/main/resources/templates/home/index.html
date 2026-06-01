@@ -50,28 +50,28 @@
     </section>
 
     <section class="summary-grid">
-        <article class="summary-card" data-summary="Total importado">
-            <span class="summary-label">Total importado</span>
+        <article class="summary-card" data-summary="Total no JSON">
+            <span class="summary-label">Total no JSON</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">importe um JSON para iniciar</span>
         </article>
-        <article class="summary-card neutral" data-summary="Visiveis no filtro">
-            <span class="summary-label">Vis&iacute;veis no filtro</span>
+        <article class="summary-card neutral" data-summary="Resultado do filtro">
+            <span class="summary-label">Resultado do filtro</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
-        <article class="summary-card neutral" data-summary="Sem responsavel">
-            <span class="summary-label">Sem responsavel</span>
+        <article class="summary-card neutral" data-summary="Sem responsavel no filtro">
+            <span class="summary-label">Sem responsavel no filtro</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
-        <article class="summary-card neutral" data-summary="Entregues">
-            <span class="summary-label">Entregues</span>
+        <article class="summary-card neutral" data-summary="Done no filtro">
+            <span class="summary-label">Done no filtro</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
-        <article class="summary-card neutral" data-summary="Em andamento">
-            <span class="summary-label">Em andamento</span>
+        <article class="summary-card neutral" data-summary="Doing no filtro">
+            <span class="summary-label">Doing no filtro</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
@@ -83,113 +83,230 @@
     </section>
 
     <section id="dashboardContent" class="hidden">
-        <section class="action-panel">
+        <section class="manager-toggle-panel">
             <div>
-                <span class="section-kicker">A&ccedil;&otilde;es r&aacute;pidas</span>
-                <h2>O que vale olhar agora</h2>
+                <span class="section-kicker">Modo de leitura</span>
+                <h2>Quer olhar como gerente?</h2>
+                <p>A vis&atilde;o gerencial usa os mesmos filtros ativos, mas prioriza entrega, pend&ecirc;ncia e respons&aacute;veis.</p>
             </div>
-            <div id="actionList" class="quick-action-list"></div>
+            <button id="managerViewToggle" class="manager-button" type="button">Ativar vis&atilde;o gerencial</button>
         </section>
 
-        <section id="workflowGrid" class="workflow-grid"></section>
-
-        <section class="visual-dashboard">
-            <section class="panel chart-panel">
-                <div class="panel-header">
-                    <h2>Entrega no filtro</h2>
-                    <span>Propor&ccedil;&atilde;o de cards em Done</span>
+        <section id="managerView" class="manager-view hidden">
+            <section class="manager-hero">
+                <div>
+                    <span class="section-kicker">Vis&atilde;o gerencial</span>
+                    <h2>Resumo executivo do recorte</h2>
+                    <p id="managerScope">Filtros atuais aplicados ao painel.</p>
                 </div>
-                <div id="deliveryGauge" class="gauge-area"></div>
+                <div class="manager-score">
+                    <strong id="managerDeliveryPercent">0%</strong>
+                    <span>entrega no recorte</span>
+                </div>
             </section>
 
-            <section class="panel chart-panel">
-                <div class="panel-header">
-                    <h2>Fluxo do quadro</h2>
-                    <span>Distribui&ccedil;&atilde;o por etapa</span>
-                </div>
-                <div id="stageChart" class="bar-chart"></div>
+            <section class="manager-kpi-grid">
+                <article class="manager-kpi success">
+                    <span>Entregues</span>
+                    <strong id="managerDone">0</strong>
+                    <small id="managerDoneNote">cards em Done</small>
+                </article>
+                <article class="manager-kpi danger">
+                    <span>Pendentes</span>
+                    <strong id="managerPending">0</strong>
+                    <small>fora de Done</small>
+                </article>
+                <article class="manager-kpi warning">
+                    <span>Em andamento</span>
+                    <strong id="managerDoing">0</strong>
+                    <small>cards em Doing</small>
+                </article>
+                <article class="manager-kpi neutral">
+                    <span>Aguardando review</span>
+                    <strong id="managerReview">0</strong>
+                    <small>cards em Review</small>
+                </article>
+                <article class="manager-kpi danger">
+                    <span>Sem respons&aacute;vel</span>
+                    <strong id="managerWithoutOwner">0</strong>
+                    <small>precisam de dono</small>
+                </article>
+                <article class="manager-kpi neutral">
+                    <span>Backlog</span>
+                    <strong id="managerBacklog">0</strong>
+                    <small>a priorizar</small>
+                </article>
             </section>
 
-            <section class="panel chart-panel">
-                <div class="panel-header">
-                    <h2>Carga por pessoa</h2>
-                    <span>Top respons&aacute;veis no filtro</span>
-                </div>
-                <div id="peopleChart" class="bar-chart"></div>
+            <section class="dashboard-grid manager-grid">
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Entrega por pessoa</h2>
+                        <span>Resultado individual dentro do filtro atual</span>
+                    </div>
+
+                    <table class="data-table compact">
+                        <thead>
+                        <tr>
+                            <th>Respons&aacute;vel</th>
+                            <th>Total</th>
+                            <th>Done</th>
+                            <th>Doing</th>
+                            <th>Review</th>
+                            <th>Pendente</th>
+                            <th>Entrega</th>
+                        </tr>
+                        </thead>
+                        <tbody id="managerPeopleBody"></tbody>
+                    </table>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>O que falta resolver</h2>
+                        <span>Pontos de aten&ccedil;&atilde;o do recorte atual</span>
+                    </div>
+
+                    <div id="managerActionList" class="manager-action-list"></div>
+                </section>
             </section>
 
-            <section class="panel chart-panel">
+            <section class="panel manager-front-panel">
                 <div class="panel-header">
-                    <h2>Tipos</h2>
-                    <span>Tipos mais frequentes</span>
-                </div>
-                <div id="typeChart" class="type-chart"></div>
-            </section>
-        </section>
-
-        <section class="dashboard-grid">
-            <section class="panel">
-                <div class="panel-header">
-                    <h2>Divis&atilde;o por pessoa</h2>
-                    <span>Volume por respons&aacute;vel e etapa do quadro</span>
+                    <h2>Entrega por frente</h2>
+                    <span>Prefixos encontrados nos cards filtrados</span>
                 </div>
 
-                <table class="data-table">
+                <table class="data-table compact">
                     <thead>
                     <tr>
-                        <th>Respons&aacute;vel</th>
+                        <th>Frente</th>
                         <th>Total</th>
-                        <th>Backlog</th>
-                        <th>To Do</th>
-                        <th>Doing</th>
-                        <th>Review</th>
                         <th>Done</th>
-                        <th>Tipo principal</th>
+                        <th>Pendente</th>
+                        <th>Entrega</th>
                     </tr>
                     </thead>
-                    <tbody id="personWorkloadBody"></tbody>
-                </table>
-            </section>
-
-            <section class="panel">
-                <div class="panel-header">
-                    <h2>Tipos de demanda</h2>
-                    <span>Classifica&ccedil;&atilde;o encontrada nos cards</span>
-                </div>
-
-                <table class="data-table compact">
-                    <thead>
-                    <tr>
-                        <th>Tipo</th>
-                        <th>Quantidade</th>
-                        <th>Observa&ccedil;&atilde;o</th>
-                    </tr>
-                    </thead>
-                    <tbody id="typeCountBody"></tbody>
+                    <tbody id="managerFrontBody"></tbody>
                 </table>
             </section>
         </section>
 
-        <section class="panel cards-panel">
-            <div class="panel-header">
-                <h2>Cards filtrados</h2>
-                <span><strong id="visibleCards">0</strong> cards vis&iacute;veis</span>
-            </div>
+        <section id="operationalView">
+            <section class="action-panel">
+                <div>
+                    <span class="section-kicker">Atalhos</span>
+                    <h2>Atalhos do quadro inteiro</h2>
+                    <p>Esses bot&otilde;es mudam os filtros para voc&ecirc; investigar um recorte.</p>
+                </div>
+                <div id="actionList" class="quick-action-list"></div>
+            </section>
 
-            <div class="card-table-wrapper">
-                <table class="data-table compact">
-                    <thead>
-                    <tr>
-                        <th>Card</th>
-                        <th>Lista</th>
-                        <th>Respons&aacute;vel</th>
-                        <th>Tipo</th>
-                        <th>&Uacute;ltima atividade</th>
-                    </tr>
-                    </thead>
-                    <tbody id="cardRowsBody"></tbody>
-                </table>
-            </div>
+            <section class="section-heading">
+                <span class="section-kicker">Fluxo operacional</span>
+                <h2>Etapas dos cards filtrados</h2>
+            </section>
+
+            <section id="workflowGrid" class="workflow-grid"></section>
+
+            <section class="visual-dashboard">
+                <section class="panel chart-panel">
+                    <div class="panel-header">
+                        <h2>Entrega dos cards filtrados</h2>
+                        <span>Propor&ccedil;&atilde;o de cards em Done</span>
+                    </div>
+                    <div id="deliveryGauge" class="gauge-area"></div>
+                </section>
+
+                <section class="panel chart-panel">
+                    <div class="panel-header">
+                        <h2>Fluxo dos cards filtrados</h2>
+                        <span>Distribui&ccedil;&atilde;o por etapa</span>
+                    </div>
+                    <div id="stageChart" class="bar-chart"></div>
+                </section>
+
+                <section class="panel chart-panel">
+                    <div class="panel-header">
+                        <h2>Respons&aacute;veis dos cards filtrados</h2>
+                        <span>Top respons&aacute;veis no filtro</span>
+                    </div>
+                    <div id="peopleChart" class="bar-chart"></div>
+                </section>
+
+                <section class="panel chart-panel">
+                    <div class="panel-header">
+                        <h2>Tipos dos cards filtrados</h2>
+                        <span>Tipos mais frequentes</span>
+                    </div>
+                    <div id="typeChart" class="type-chart"></div>
+                </section>
+            </section>
+
+            <section class="dashboard-grid">
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Divis&atilde;o por pessoa</h2>
+                        <span>Volume por respons&aacute;vel e etapa do quadro</span>
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Respons&aacute;vel</th>
+                            <th>Total</th>
+                            <th>Backlog</th>
+                            <th>To Do</th>
+                            <th>Doing</th>
+                            <th>Review</th>
+                            <th>Done</th>
+                            <th>Tipo principal</th>
+                        </tr>
+                        </thead>
+                        <tbody id="personWorkloadBody"></tbody>
+                    </table>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Tipos de demanda</h2>
+                        <span>Classifica&ccedil;&atilde;o encontrada nos cards</span>
+                    </div>
+
+                    <table class="data-table compact">
+                        <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Quantidade</th>
+                            <th>Observa&ccedil;&atilde;o</th>
+                        </tr>
+                        </thead>
+                        <tbody id="typeCountBody"></tbody>
+                    </table>
+                </section>
+            </section>
+
+            <section class="panel cards-panel">
+                <div class="panel-header">
+                    <h2>Cards filtrados</h2>
+                    <span><strong id="visibleCards">0</strong> cards vis&iacute;veis</span>
+                </div>
+
+                <div class="card-table-wrapper">
+                    <table class="data-table compact">
+                        <thead>
+                        <tr>
+                            <th>Card</th>
+                            <th>Lista</th>
+                            <th>Respons&aacute;vel</th>
+                            <th>Tipo</th>
+                            <th>&Uacute;ltima atividade</th>
+                        </tr>
+                        </thead>
+                        <tbody id="cardRowsBody"></tbody>
+                    </table>
+                </div>
+            </section>
         </section>
     </section>
 

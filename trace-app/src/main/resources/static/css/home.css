@@ -9,7 +9,8 @@
     background: var(--trace-surface);
 }
 
-.action-panel {
+.action-panel,
+.manager-toggle-panel {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -21,10 +22,42 @@
     background: var(--trace-surface);
 }
 
-.action-panel h2 {
+.manager-toggle-panel {
+    border-color: var(--trace-secondary);
+    background: linear-gradient(90deg, var(--trace-surface), var(--trace-surface-raised));
+}
+
+.action-panel h2,
+.manager-toggle-panel h2,
+.section-heading h2 {
     margin: 4px 0 0;
     font-size: 18px;
     color: var(--trace-white);
+}
+
+.action-panel p,
+.manager-toggle-panel p {
+    margin: 6px 0 0;
+    color: var(--trace-text-soft);
+    font-size: 13px;
+}
+
+.manager-button {
+    min-height: 44px;
+    border: 1px solid var(--trace-secondary);
+    border-radius: 6px;
+    padding: 0 18px;
+    color: var(--trace-white);
+    background: var(--trace-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.manager-button:hover,
+.manager-button.active {
+    background: var(--trace-primary);
 }
 
 .quick-action-list {
@@ -226,7 +259,12 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
-    margin-top: 16px;
+    margin-top: 10px;
+}
+
+.section-heading {
+    margin-top: 18px;
+    padding: 0 2px;
 }
 
 .workflow-card {
@@ -442,6 +480,178 @@
     text-align: center;
 }
 
+.manager-view {
+    margin-top: 16px;
+}
+
+.manager-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 22px;
+    border: 1px solid var(--trace-secondary);
+    border-radius: 6px;
+    background: var(--trace-surface);
+}
+
+.manager-hero h2 {
+    margin: 4px 0 6px;
+    color: var(--trace-white);
+    font-size: 22px;
+}
+
+.manager-hero p {
+    margin: 0;
+    color: var(--trace-text-soft);
+    font-size: 13px;
+}
+
+.manager-score {
+    min-width: 170px;
+    min-height: 94px;
+    border: 1px solid var(--trace-primary);
+    border-radius: 6px;
+    background: var(--trace-surface-raised);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.manager-score strong {
+    color: var(--trace-white);
+    font-size: 34px;
+    line-height: 1;
+}
+
+.manager-score span {
+    margin-top: 8px;
+    color: var(--trace-text-soft);
+    font-size: 13px;
+}
+
+.manager-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.manager-kpi {
+    min-height: 112px;
+    border: 1px solid var(--trace-primary);
+    border-radius: 6px;
+    padding: 14px;
+    background: var(--trace-surface);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.manager-kpi.success {
+    border-left: 4px solid var(--trace-success);
+}
+
+.manager-kpi.warning {
+    border-left: 4px solid var(--trace-warning);
+}
+
+.manager-kpi.danger {
+    border-left: 4px solid var(--trace-danger);
+}
+
+.manager-kpi.neutral {
+    border-left: 4px solid var(--trace-primary);
+}
+
+.manager-kpi span {
+    color: var(--trace-text-muted);
+    font-size: 13px;
+}
+
+.manager-kpi strong {
+    color: var(--trace-white);
+    font-size: 30px;
+    line-height: 1;
+}
+
+.manager-kpi small {
+    color: var(--trace-text-soft);
+    font-size: 12px;
+}
+
+.manager-grid {
+    grid-template-columns: 1.35fr 0.8fr;
+}
+
+.manager-action-list {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+}
+
+.manager-action {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding: 12px;
+    border: 1px solid var(--trace-primary);
+    border-radius: 6px;
+    background: var(--trace-background);
+}
+
+.manager-action.success {
+    border-left: 4px solid var(--trace-success);
+}
+
+.manager-action.warning {
+    border-left: 4px solid var(--trace-warning);
+}
+
+.manager-action.danger {
+    border-left: 4px solid var(--trace-danger);
+}
+
+.manager-action.neutral {
+    border-left: 4px solid var(--trace-primary);
+}
+
+.manager-action strong {
+    color: var(--trace-white);
+}
+
+.manager-action span {
+    color: var(--trace-white);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.manager-action p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--trace-text-soft);
+    font-size: 13px;
+}
+
+.manager-front-panel {
+    margin-top: 16px;
+}
+
+.delivery-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    min-height: 24px;
+    border-radius: 999px;
+    color: var(--trace-white);
+    background: var(--trace-surface-raised);
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
@@ -580,6 +790,8 @@
 @media (max-width: 1100px) {
     .import-panel,
     .action-panel,
+    .manager-toggle-panel,
+    .manager-hero,
     .import-form {
         align-items: stretch;
         flex-direction: column;
@@ -596,6 +808,7 @@
     .summary-grid,
     .workflow-grid,
     .visual-dashboard,
+    .manager-kpi-grid,
     .dashboard-grid,
     .dashboard-grid.secondary {
         grid-template-columns: 1fr;
@@ -612,6 +825,7 @@
     }
 
     .quick-action,
+    .manager-button,
     .secondary-button,
     .primary-button {
         width: 100%;

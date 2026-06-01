@@ -59,11 +59,11 @@ public class HomeDashboardService {
                 LocalDateTime.now().format(IMPORT_DATE_FORMAT),
                 true,
                 List.of(
-                        new HomeDashboardView.SummaryCard("Total importado", String.valueOf(totalCards), "cards abertos importados", ""),
-                        new HomeDashboardView.SummaryCard("Visiveis no filtro", String.valueOf(totalCards), "cards visiveis agora", ""),
-                        new HomeDashboardView.SummaryCard("Sem responsavel", String.valueOf(withoutOwnerCards), "precisam de triagem", withoutOwnerCards > 0 ? "danger" : "neutral"),
-                        new HomeDashboardView.SummaryCard("Entregues", String.valueOf(doneCards), "cards em Done", "success"),
-                        new HomeDashboardView.SummaryCard("Em andamento", String.valueOf(doingCards), "cards em Doing", "warning")
+                        new HomeDashboardView.SummaryCard("Total no JSON", String.valueOf(totalCards), "cards abertos no arquivo importado", ""),
+                        new HomeDashboardView.SummaryCard("Resultado do filtro", String.valueOf(totalCards), "cards que batem com os filtros atuais", ""),
+                        new HomeDashboardView.SummaryCard("Sem responsavel no filtro", String.valueOf(withoutOwnerCards), "cards filtrados sem dono", withoutOwnerCards > 0 ? "danger" : "neutral"),
+                        new HomeDashboardView.SummaryCard("Done no filtro", String.valueOf(doneCards), "cards filtrados em Done", "success"),
+                        new HomeDashboardView.SummaryCard("Doing no filtro", String.valueOf(doingCards), "cards filtrados em Doing", "warning")
                 ),
                 workflowColumns(cards, lists),
                 personWorkloads(cards),

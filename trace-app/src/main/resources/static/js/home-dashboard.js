@@ -9,6 +9,21 @@
     const sourceInfo = document.getElementById('sourceInfo');
     const emptyState = document.getElementById('emptyState');
     const dashboardContent = document.getElementById('dashboardContent');
+    const managerViewToggle = document.getElementById('managerViewToggle');
+    const managerView = document.getElementById('managerView');
+    const operationalView = document.getElementById('operationalView');
+    const managerScope = document.getElementById('managerScope');
+    const managerDeliveryPercent = document.getElementById('managerDeliveryPercent');
+    const managerDone = document.getElementById('managerDone');
+    const managerDoneNote = document.getElementById('managerDoneNote');
+    const managerPending = document.getElementById('managerPending');
+    const managerDoing = document.getElementById('managerDoing');
+    const managerReview = document.getElementById('managerReview');
+    const managerWithoutOwner = document.getElementById('managerWithoutOwner');
+    const managerBacklog = document.getElementById('managerBacklog');
+    const managerPeopleBody = document.getElementById('managerPeopleBody');
+    const managerActionList = document.getElementById('managerActionList');
+    const managerFrontBody = document.getElementById('managerFrontBody');
     const searchInput = document.getElementById('cardSearch');
     const personFilter = document.getElementById('personFilter');
     const listFilter = document.getElementById('listFilter');
@@ -29,6 +44,7 @@
     const summaryCards = Array.from(document.querySelectorAll('[data-summary]'));
 
     let dashboard = emptyDashboard();
+    let managerMode = false;
 
     importForm.addEventListener('submit', event => {
         event.preventDefault();
@@ -65,6 +81,12 @@
     });
 
     exportCsv.addEventListener('click', exportFilteredCsv);
+
+    managerViewToggle.addEventListener('click', () => {
+        managerMode = !managerMode;
+        updateViewMode();
+        applyFilters();
+    });
 
     actionList.addEventListener('click', event => {
         const action = event.target.closest('[data-action]');
@@ -215,6 +237,7 @@
         emptyState.classList.toggle('hidden', dashboard.imported);
         dashboardContent.classList.toggle('hidden', !dashboard.imported);
 
+        updateViewMode();
         populateFilters();
         renderQuickActions();
         renderRows();
@@ -280,16 +303,17 @@
         const doing = filteredRows.filter(row => listGroup(row.dataset.list) === 'doing').length;
         const done = filteredRows.filter(row => listGroup(row.dataset.list) === 'done').length;
 
-        updateSummary('Total importado', dashboard.cards.length, dashboard.imported ? 'cards abertos importados' : 'importe um JSON para iniciar', '');
-        updateSummary('Visiveis no filtro', filteredRows.length, dashboard.imported ? 'cards visiveis agora' : 'sem dados importados', '');
-        updateSummary('Sem responsavel', withoutOwner, dashboard.imported ? 'precisam de triagem' : 'sem dados importados', withoutOwner > 0 ? 'danger' : 'neutral');
-        updateSummary('Entregues', done, dashboard.imported ? 'cards em Done' : 'sem dados importados', dashboard.imported ? 'success' : 'neutral');
-        updateSummary('Em andamento', doing, dashboard.imported ? 'cards em Doing' : 'sem dados importados', dashboard.imported ? 'warning' : 'neutral');
+        updateSummary('Total no JSON', dashboard.cards.length, dashboard.imported ? 'cards abertos no arquivo importado' : 'importe um JSON para iniciar', '');
+        updateSummary('Resultado do filtro', filteredRows.length, dashboard.imported ? 'cards que batem com os filtros atuais' : 'sem dados importados', '');
+        updateSummary('Sem responsavel no filtro', withoutOwner, dashboard.imported ? 'cards filtrados sem dono' : 'sem dados importados', withoutOwner > 0 ? 'danger' : 'neutral');
+        updateSummary('Done no filtro', done, dashboard.imported ? 'cards filtrados em Done' : 'sem dados importados', dashboard.imported ? 'success' : 'neutral');
+        updateSummary('Doing no filtro', doing, dashboard.imported ? 'cards filtrados em Doing' : 'sem dados importados', dashboard.imported ? 'warning' : 'neutral');
 
         renderWorkflow(filteredRows);
         renderCharts(filteredRows);
         renderPeople(filteredRows);
         renderTypes(filteredRows);
+        renderManagerView(filteredRows);
     }
 
     function renderQuickActions() {
@@ -301,31 +325,31 @@
         const actions = [
             {
                 action: 'without-owner',
-                label: 'Sem responsavel',
+                label: 'Sem responsavel no quadro',
                 total: dashboard.cards.filter(card => card.withoutOwner).length,
                 note: 'cards que precisam de dono'
             },
             {
                 action: 'doing',
-                label: 'Em andamento',
+                label: 'Doing no quadro',
                 total: dashboard.cards.filter(card => listGroup(card.listName) === 'doing').length,
                 note: 'trabalho aberto agora'
             },
             {
                 action: 'backlog',
-                label: 'Backlog',
+                label: 'Backlog no quadro',
                 total: dashboard.cards.filter(card => listGroup(card.listName) === 'backlog').length,
                 note: 'entrada para priorizacao'
             },
             {
                 action: 'rhp',
-                label: '[RHP]',
+                label: '[RHP] no quadro',
                 total: dashboard.cards.filter(card => card.type.includes('[RHP]') || card.name.startsWith('[RHP]')).length,
                 note: 'cards dessa frente'
             },
             {
                 action: 'no-type',
-                label: 'Sem tipo claro',
+                label: 'Sem tipo no quadro',
                 total: dashboard.cards.filter(card => card.type === 'Outro').length,
                 note: 'sem etiqueta de tipo'
             }
@@ -532,6 +556,161 @@
             .join('') || '<tr><td colspan="3">Nenhum tipo encontrado para o filtro.</td></tr>';
     }
 
+    function renderManagerView(filteredRows) {
+        const total = filteredRows.length;
+        const done = countByGroup(filteredRows, 'done');
+        const doing = countByGroup(filteredRows, 'doing');
+        const review = countByGroup(filteredRows, 'review');
+        const backlog = countByGroup(filteredRows, 'backlog');
+        const withoutOwner = filteredRows.filter(row => row.dataset.withoutOwner === 'true').length;
+        const pending = total - done;
+        const percent = deliveryPercent(done, total);
+
+        managerScope.textContent = managerScopeText(total);
+        managerDeliveryPercent.textContent = `${percent}%`;
+        managerDone.textContent = done;
+        managerDoneNote.textContent = `${done} de ${total} cards em Done`;
+        managerPending.textContent = pending;
+        managerDoing.textContent = doing;
+        managerReview.textContent = review;
+        managerWithoutOwner.textContent = withoutOwner;
+        managerBacklog.textContent = backlog;
+
+        renderManagerPeople(filteredRows);
+        renderManagerActions({ total, done, pending, doing, review, backlog, withoutOwner, noType: countNoType(filteredRows) });
+        renderManagerFronts(filteredRows);
+    }
+
+    function renderManagerPeople(filteredRows) {
+        const people = new Map();
+
+        filteredRows.forEach(row => {
+            splitMembers(row.dataset.person).forEach(member => {
+                if (!people.has(member)) {
+                    people.set(member, { total: 0, done: 0, doing: 0, review: 0 });
+                }
+
+                const person = people.get(member);
+                const group = listGroup(row.dataset.list);
+                person.total++;
+
+                if (group === 'done') {
+                    person.done++;
+                }
+
+                if (group === 'doing') {
+                    person.doing++;
+                }
+
+                if (group === 'review') {
+                    person.review++;
+                }
+            });
+        });
+
+        managerPeopleBody.innerHTML = Array.from(people.entries())
+            .sort((left, right) => deliveryPercent(right[1].done, right[1].total) - deliveryPercent(left[1].done, left[1].total)
+                    || right[1].total - left[1].total
+                    || left[0].localeCompare(right[0]))
+            .map(([name, person]) => {
+                const pending = person.total - person.done;
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(name)}</td>
+                        <td>${person.total}</td>
+                        <td>${person.done}</td>
+                        <td>${person.doing}</td>
+                        <td>${person.review}</td>
+                        <td>${pending}</td>
+                        <td><span class="delivery-pill">${deliveryPercent(person.done, person.total)}%</span></td>
+                    </tr>
+                `;
+            })
+            .join('') || '<tr><td colspan="7">Nenhum responsavel encontrado para o filtro.</td></tr>';
+    }
+
+    function renderManagerActions(counters) {
+        const actions = [];
+
+        if (counters.withoutOwner > 0) {
+            actions.push(managerAction('Definir responsaveis', counters.withoutOwner, 'cards filtrados ainda nao tem dono.', 'danger'));
+        }
+
+        if (counters.backlog > 0) {
+            actions.push(managerAction('Priorizar backlog', counters.backlog, 'cards filtrados ainda estao aguardando priorizacao.', 'neutral'));
+        }
+
+        if (counters.review > 0) {
+            actions.push(managerAction('Destravar review', counters.review, 'cards filtrados aguardam validacao.', 'warning'));
+        }
+
+        if (counters.doing > 0) {
+            actions.push(managerAction('Acompanhar execucao', counters.doing, 'cards filtrados estao em andamento.', 'warning'));
+        }
+
+        if (counters.noType > 0) {
+            actions.push(managerAction('Classificar tipo', counters.noType, 'cards filtrados estao sem tipo claro.', 'neutral'));
+        }
+
+        if (!actions.length && counters.total > 0) {
+            actions.push(managerAction('Recorte sem alerta principal', counters.done, 'todos os cards filtrados estao entregues ou sem pendencia evidente.', 'success'));
+        }
+
+        if (counters.total === 0) {
+            actions.push(managerAction('Nenhum card encontrado', 0, 'ajuste os filtros para ver indicadores gerenciais.', 'neutral'));
+        }
+
+        managerActionList.innerHTML = actions.map(action => `
+            <article class="manager-action ${action.severity}">
+                <strong>${escapeHtml(action.title)}</strong>
+                <span>${action.total}</span>
+                <p>${escapeHtml(action.note)}</p>
+            </article>
+        `).join('');
+    }
+
+    function renderManagerFronts(filteredRows) {
+        const fronts = new Map();
+
+        filteredRows.forEach(row => {
+            const title = row.querySelector('.card-title').textContent;
+            const front = prefixFromName(title) || prefixFromName(row.dataset.type) || 'Sem frente';
+
+            if (!fronts.has(front)) {
+                fronts.set(front, { total: 0, done: 0 });
+            }
+
+            const counter = fronts.get(front);
+            counter.total++;
+
+            if (listGroup(row.dataset.list) === 'done') {
+                counter.done++;
+            }
+        });
+
+        managerFrontBody.innerHTML = Array.from(fronts.entries())
+            .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
+            .map(([front, counter]) => {
+                const pending = counter.total - counter.done;
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(front)}</td>
+                        <td>${counter.total}</td>
+                        <td>${counter.done}</td>
+                        <td>${pending}</td>
+                        <td><span class="delivery-pill">${deliveryPercent(counter.done, counter.total)}%</span></td>
+                    </tr>
+                `;
+            })
+            .join('') || '<tr><td colspan="5">Nenhuma frente encontrada para o filtro.</td></tr>';
+    }
+
+    function managerAction(title, total, note, severity) {
+        return { title, total, note, severity };
+    }
+
     function updateSummary(label, value, note, severity) {
         const card = summaryCards.find(item => item.dataset.summary === label);
 
@@ -550,6 +729,13 @@
         listFilter.value = '';
         typeFilter.value = '';
         withoutOwnerFilter.checked = false;
+    }
+
+    function updateViewMode() {
+        managerView.classList.toggle('hidden', !managerMode);
+        operationalView.classList.toggle('hidden', managerMode);
+        managerViewToggle.textContent = managerMode ? 'Voltar para visao operacional' : 'Ativar visao gerencial';
+        managerViewToggle.classList.toggle('active', managerMode);
     }
 
     function applyQuickAction(action) {
@@ -647,6 +833,48 @@
         }
 
         return 'other';
+    }
+
+    function countByGroup(rows, group) {
+        return rows.filter(row => listGroup(row.dataset.list) === group).length;
+    }
+
+    function countNoType(rows) {
+        return rows.filter(row => row.dataset.type === 'Outro').length;
+    }
+
+    function deliveryPercent(done, total) {
+        return total ? Math.round((done / total) * 100) : 0;
+    }
+
+    function managerScopeText(total) {
+        const filters = [];
+
+        if (searchInput.value.trim()) {
+            filters.push(`busca "${searchInput.value.trim()}"`);
+        }
+
+        if (personFilter.value) {
+            filters.push(`responsavel ${personFilter.value}`);
+        }
+
+        if (listFilter.value) {
+            filters.push(`lista ${listFilter.value}`);
+        }
+
+        if (typeFilter.value) {
+            filters.push(`tipo ${typeFilter.value}`);
+        }
+
+        if (withoutOwnerFilter.checked) {
+            filters.push('sem responsavel');
+        }
+
+        if (!filters.length) {
+            return `${total} cards abertos do JSON importado.`;
+        }
+
+        return `${total} cards encontrados com ${filters.join(', ')}.`;
     }
 
     function workflowNote(listName) {

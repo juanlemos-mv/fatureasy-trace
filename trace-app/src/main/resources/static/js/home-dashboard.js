@@ -285,7 +285,7 @@
 
         rows.forEach(row => {
             const show = (!search || row.dataset.search.includes(search))
-                && (!person || row.dataset.person.includes(person))
+                && (!person || splitMembers(row.dataset.person).includes(person))
                 && (!list || row.dataset.list === list)
                 && (!type || row.dataset.type === type)
                 && (!onlyWithoutOwner || row.dataset.withoutOwner === 'true');
@@ -563,13 +563,17 @@
         const review = countByGroup(filteredRows, 'review');
         const backlog = countByGroup(filteredRows, 'backlog');
         const withoutOwner = filteredRows.filter(row => row.dataset.withoutOwner === 'true').length;
+        const shared = countShared(filteredRows);
+        const selectedPerson = selectedManagerPerson();
         const pending = total - done;
         const percent = deliveryPercent(done, total);
 
-        managerScope.textContent = managerScopeText(total);
+        managerScope.textContent = managerScopeText(total, shared);
         managerDeliveryPercent.textContent = `${percent}%`;
         managerDone.textContent = done;
-        managerDoneNote.textContent = `${done} de ${total} cards em Done`;
+        managerDoneNote.textContent = selectedPerson
+            ? `${done} de ${total} cards em Done para a pessoa filtrada`
+            : `${done} de ${total} cards em Done`;
         managerPending.textContent = pending;
         managerDoing.textContent = doing;
         managerReview.textContent = review;
@@ -577,22 +581,30 @@
         managerBacklog.textContent = backlog;
 
         renderManagerPeople(filteredRows);
-        renderManagerActions({ total, done, pending, doing, review, backlog, withoutOwner, noType: countNoType(filteredRows) });
+        renderManagerActions({ total, done, pending, doing, review, backlog, withoutOwner, shared, noType: countNoType(filteredRows) });
         renderManagerFronts(filteredRows);
     }
 
     function renderManagerPeople(filteredRows) {
         const people = new Map();
+        const selectedPerson = selectedManagerPerson();
 
         filteredRows.forEach(row => {
-            splitMembers(row.dataset.person).forEach(member => {
+            const rowMembers = splitMembers(row.dataset.person);
+            const members = selectedPerson ? rowMembers.filter(member => member === selectedPerson) : rowMembers;
+
+            members.forEach(member => {
                 if (!people.has(member)) {
-                    people.set(member, { total: 0, done: 0, doing: 0, review: 0 });
+                    people.set(member, { total: 0, done: 0, doing: 0, review: 0, shared: 0 });
                 }
 
                 const person = people.get(member);
                 const group = listGroup(row.dataset.list);
                 person.total++;
+
+                if (rowMembers.length > 1) {
+                    person.shared++;
+                }
 
                 if (group === 'done') {
                     person.done++;
@@ -623,11 +635,12 @@
                         <td>${person.doing}</td>
                         <td>${person.review}</td>
                         <td>${pending}</td>
+                        <td>${person.shared}</td>
                         <td><span class="delivery-pill">${deliveryPercent(person.done, person.total)}%</span></td>
                     </tr>
                 `;
             })
-            .join('') || '<tr><td colspan="7">Nenhum responsavel encontrado para o filtro.</td></tr>';
+            .join('') || '<tr><td colspan="8">Nenhum responsavel encontrado para o filtro.</td></tr>';
     }
 
     function renderManagerActions(counters) {
@@ -635,6 +648,10 @@
 
         if (counters.withoutOwner > 0) {
             actions.push(managerAction('Definir responsaveis', counters.withoutOwner, 'cards filtrados ainda nao tem dono.', 'danger'));
+        }
+
+        if (selectedManagerPerson() && counters.shared > 0) {
+            actions.push(managerAction('Tarefas em conjunto', counters.shared, 'cards da pessoa filtrada tambem possuem outros responsaveis.', 'neutral'));
         }
 
         if (counters.backlog > 0) {
@@ -843,11 +860,15 @@
         return rows.filter(row => row.dataset.type === 'Outro').length;
     }
 
+    function countShared(rows) {
+        return rows.filter(row => splitMembers(row.dataset.person).length > 1).length;
+    }
+
     function deliveryPercent(done, total) {
         return total ? Math.round((done / total) * 100) : 0;
     }
 
-    function managerScopeText(total) {
+    function managerScopeText(total, shared) {
         const filters = [];
 
         if (searchInput.value.trim()) {
@@ -874,7 +895,30 @@
             return `${total} cards abertos do JSON importado.`;
         }
 
-        return `${total} cards encontrados com ${filters.join(', ')}.`;
+        const text = `${total} cards encontrados com ${filters.join(', ')}.`;
+
+        if (selectedManagerPerson() && shared > 0) {
+            return `${text} ${shared} deles estao em conjunto com outros responsaveis.`;
+        }
+
+        return text;
+    }
+
+    function selectedManagerPerson() {
+        if (personFilter.value) {
+            return personFilter.value;
+        }
+
+        const search = normalize(searchInput.value.trim());
+
+        if (!search) {
+            return '';
+        }
+
+        const people = unique(dashboard.cards.flatMap(card => card.owners))
+            .filter(person => normalize(person).includes(search));
+
+        return people.length === 1 ? people[0] : '';
     }
 
     function workflowNote(listName) {

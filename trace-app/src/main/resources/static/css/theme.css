@@ -66,6 +66,24 @@ select {
     background: var(--trace-surface-raised);
 }
 
+.link-button {
+    border: 0;
+    padding: 9px 4px;
+    background: transparent;
+    color: var(--trace-text-soft);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    color: var(--trace-white);
+}
+
+.danger-link:hover {
+    color: #FFD9D9;
+}
+
 .context-pill {
     padding: 8px 12px;
     border: 1px solid var(--trace-secondary);

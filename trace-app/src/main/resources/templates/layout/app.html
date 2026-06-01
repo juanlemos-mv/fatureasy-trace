@@ -17,10 +17,6 @@
 
         <nav class="sidebar-nav">
             <a class="sidebar-link" th:classappend="${activeMenu == 'home'} ? ' selected' : ''" href="/" th:href="@{/}">Dashboard</a>
-            <span class="sidebar-link disabled">Quadros</span>
-            <span class="sidebar-link disabled">Pessoas</span>
-            <span class="sidebar-link disabled">Automa&ccedil;&otilde;es</span>
-            <span class="sidebar-link disabled">Configura&ccedil;&otilde;es</span>
         </nav>
     </aside>
 
@@ -33,7 +29,7 @@
 
             <div class="topbar-actions">
                 <span class="context-pill">Fonte: JSON manual</span>
-                <span class="context-pill">Ambiente: Local</span>
+                <span class="context-pill">Dados no navegador</span>
             </div>
         </header>
 

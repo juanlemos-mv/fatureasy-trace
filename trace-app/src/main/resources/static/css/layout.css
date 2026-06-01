@@ -54,16 +54,6 @@
     color: var(--trace-white);
 }
 
-.sidebar-link.disabled {
-    opacity: 0.55;
-    cursor: default;
-}
-
-.sidebar-link.disabled:hover {
-    background: transparent;
-    color: var(--trace-text-muted);
-}
-
 .app-main {
     flex: 1;
     min-width: 0;

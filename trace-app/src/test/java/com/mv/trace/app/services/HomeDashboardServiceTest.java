@@ -53,9 +53,7 @@ class HomeDashboardServiceTest {
                 }
                 """;
 
-        service.importDashboard("board.json", new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
-
-        var dashboard = service.getDashboard();
+        var dashboard = service.importDashboard("board.json", new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 
         assertThat(dashboard.imported()).isTrue();
         assertThat(dashboard.sourceFile()).isEqualTo("board.json");

@@ -11,19 +11,19 @@
 <th:block th:fragment="content">
     <section class="import-panel">
         <div>
-            <span class="section-kicker">Importa&ccedil;&atilde;o</span>
+            <span class="section-kicker">Importa&ccedil;&atilde;o local</span>
             <h2>Atualizar painel pelo JSON do Trello</h2>
-            <p th:text="|Fonte atual: ${dashboard.sourceFile} - ${dashboard.importedAt}|">Fonte atual: nenhum arquivo</p>
+            <p id="sourceInfo">Fonte atual: nenhum arquivo importado</p>
         </div>
 
-        <form class="import-form" method="post" enctype="multipart/form-data" th:action="@{/dashboard/import}">
-            <input class="file-input" type="file" name="file" accept=".json,application/json" required>
+        <form id="importForm" class="import-form">
+            <input id="jsonFile" class="file-input" type="file" accept=".json,application/json" required>
             <button class="primary-button" type="submit">Importar JSON</button>
+            <button id="clearData" class="link-button danger-link" type="button">Limpar dados</button>
         </form>
     </section>
 
-    <div class="message success-message" th:if="${importMessage}" th:text="${importMessage}">JSON importado.</div>
-    <div class="message error-message" th:if="${importError}" th:text="${importError}">Erro ao importar.</div>
+    <div id="importMessage" class="message hidden"></div>
 
     <section class="search-panel">
         <input
@@ -34,134 +34,146 @@
         >
         <select id="personFilter" class="filter-input">
             <option value="">Todas as pessoas</option>
-            <option th:each="person : ${dashboard.personFilters}" th:value="${person}" th:text="${person}">Juan</option>
         </select>
         <select id="listFilter" class="filter-input">
             <option value="">Todas as listas</option>
-            <option th:each="list : ${dashboard.listFilters}" th:value="${list}" th:text="${list}">To Do</option>
         </select>
         <select id="typeFilter" class="filter-input">
             <option value="">Todos os tipos</option>
-            <option th:each="type : ${dashboard.typeFilters}" th:value="${type}" th:text="${type}">Feature</option>
         </select>
         <label class="checkbox-filter">
             <input id="withoutOwnerFilter" type="checkbox">
             Sem responsavel
         </label>
-        <button id="clearFilters" class="secondary-button" type="button">Limpar</button>
+        <button id="clearFilters" class="secondary-button" type="button">Limpar filtros</button>
+        <button id="exportCsv" class="secondary-button" type="button">Exportar CSV</button>
     </section>
 
     <section class="summary-grid">
-        <article class="summary-card"
-                 th:each="card : ${dashboard.summaryCards}"
-                 th:attr="data-summary=${card.label}"
-                 th:classappend="${card.severity}">
-            <span class="summary-label" th:text="${card.label}">Cards no Trello</span>
-            <strong class="summary-value" th:text="${card.value}">0</strong>
-            <span class="summary-note" th:text="${card.note}">importe um JSON para iniciar</span>
+        <article class="summary-card" data-summary="Total importado">
+            <span class="summary-label">Total importado</span>
+            <strong class="summary-value">0</strong>
+            <span class="summary-note">importe um JSON para iniciar</span>
+        </article>
+        <article class="summary-card neutral" data-summary="Visiveis no filtro">
+            <span class="summary-label">Vis&iacute;veis no filtro</span>
+            <strong class="summary-value">0</strong>
+            <span class="summary-note">sem dados importados</span>
+        </article>
+        <article class="summary-card neutral" data-summary="Sem responsavel">
+            <span class="summary-label">Sem responsavel</span>
+            <strong class="summary-value">0</strong>
+            <span class="summary-note">sem dados importados</span>
+        </article>
+        <article class="summary-card neutral" data-summary="Entregues">
+            <span class="summary-label">Entregues</span>
+            <strong class="summary-value">0</strong>
+            <span class="summary-note">sem dados importados</span>
+        </article>
+        <article class="summary-card neutral" data-summary="Em andamento">
+            <span class="summary-label">Em andamento</span>
+            <strong class="summary-value">0</strong>
+            <span class="summary-note">sem dados importados</span>
         </article>
     </section>
 
-    <section class="empty-state" th:if="${!dashboard.imported}">
+    <section id="emptyState" class="empty-state">
         <strong>Nenhum JSON importado ainda.</strong>
-        <p>Exporte o quadro no Trello, importe o arquivo aqui e o painel calcula listas, responsaveis, tipos e cards sem dono.</p>
+        <p>Importe o JSON do Trello para iniciar. Os dados ficam salvos apenas neste navegador.</p>
     </section>
 
-    <section id="workflowGrid" class="workflow-grid" th:if="${dashboard.imported}">
-        <article class="workflow-card"
-                 th:each="column : ${dashboard.workflowColumns}"
-                 th:attr="data-list=${column.name}"
-                 th:classappend="${column.severity}">
-            <span class="workflow-title" th:text="${column.name}">To Do</span>
-            <strong th:text="${column.total}">25</strong>
-            <span th:text="${column.note}">selecionado para trabalho</span>
-        </article>
-    </section>
-
-    <section class="dashboard-grid" th:if="${dashboard.imported}">
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Divis&atilde;o por pessoa</h2>
-                <span>Volume por respons&aacute;vel e etapa do quadro</span>
+    <section id="dashboardContent" class="hidden">
+        <section class="action-panel">
+            <div>
+                <span class="section-kicker">A&ccedil;&otilde;es r&aacute;pidas</span>
+                <h2>O que vale olhar agora</h2>
             </div>
-
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>Respons&aacute;vel</th>
-                    <th>Total</th>
-                    <th>Backlog</th>
-                    <th>To Do</th>
-                    <th>Doing</th>
-                    <th>Review</th>
-                    <th>Done</th>
-                    <th>Tipo principal</th>
-                </tr>
-                </thead>
-                <tbody id="personWorkloadBody">
-                <tr th:each="person : ${dashboard.personWorkloads}">
-                    <td th:text="${person.name}">Juan</td>
-                    <td th:text="${person.total}">10</td>
-                    <td th:text="${person.backlog}">2</td>
-                    <td th:text="${person.todo}">2</td>
-                    <td th:text="${person.doing}">1</td>
-                    <td th:text="${person.review}">0</td>
-                    <td th:text="${person.done}">7</td>
-                    <td th:text="${person.mainType}">Feature</td>
-                </tr>
-                </tbody>
-            </table>
+            <div id="actionList" class="quick-action-list"></div>
         </section>
 
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Alertas de governan&ccedil;a</h2>
-                <span>Pontos que precisam de regra ou decis&atilde;o</span>
-            </div>
+        <section id="workflowGrid" class="workflow-grid"></section>
 
-            <div class="alert-list">
-                <article class="alert-item"
-                         th:each="alert : ${dashboard.governanceAlerts}"
-                         th:classappend="${alert.severity}">
-                    <div>
-                        <strong th:text="${alert.title}">Cards sem responsavel</strong>
-                        <p th:text="${alert.description}">44 cards ainda nao tem dono claro.</p>
-                    </div>
-                    <span th:text="${alert.action}">Definir responsavel.</span>
-                </article>
-            </div>
-        </section>
-    </section>
+        <section class="visual-dashboard">
+            <section class="panel chart-panel">
+                <div class="panel-header">
+                    <h2>Entrega no filtro</h2>
+                    <span>Propor&ccedil;&atilde;o de cards em Done</span>
+                </div>
+                <div id="deliveryGauge" class="gauge-area"></div>
+            </section>
 
-    <section class="dashboard-grid secondary" th:if="${dashboard.imported}">
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Tipos de demanda</h2>
-                <span>Classifica&ccedil;&atilde;o encontrada nos cards</span>
-            </div>
+            <section class="panel chart-panel">
+                <div class="panel-header">
+                    <h2>Fluxo do quadro</h2>
+                    <span>Distribui&ccedil;&atilde;o por etapa</span>
+                </div>
+                <div id="stageChart" class="bar-chart"></div>
+            </section>
 
-            <table class="data-table compact">
-                <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
-                    <th>Observa&ccedil;&atilde;o</th>
-                </tr>
-                </thead>
-                <tbody id="typeCountBody">
-                <tr th:each="type : ${dashboard.cardTypeCounts}">
-                    <td th:text="${type.name}">Feature</td>
-                    <td th:text="${type.total}">208</td>
-                    <td th:text="${type.note}">tipo encontrado no Trello</td>
-                </tr>
-                </tbody>
-            </table>
+            <section class="panel chart-panel">
+                <div class="panel-header">
+                    <h2>Carga por pessoa</h2>
+                    <span>Top respons&aacute;veis no filtro</span>
+                </div>
+                <div id="peopleChart" class="bar-chart"></div>
+            </section>
+
+            <section class="panel chart-panel">
+                <div class="panel-header">
+                    <h2>Tipos</h2>
+                    <span>Tipos mais frequentes</span>
+                </div>
+                <div id="typeChart" class="type-chart"></div>
+            </section>
         </section>
 
-        <section class="panel">
+        <section class="dashboard-grid">
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Divis&atilde;o por pessoa</h2>
+                    <span>Volume por respons&aacute;vel e etapa do quadro</span>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Respons&aacute;vel</th>
+                        <th>Total</th>
+                        <th>Backlog</th>
+                        <th>To Do</th>
+                        <th>Doing</th>
+                        <th>Review</th>
+                        <th>Done</th>
+                        <th>Tipo principal</th>
+                    </tr>
+                    </thead>
+                    <tbody id="personWorkloadBody"></tbody>
+                </table>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>Tipos de demanda</h2>
+                    <span>Classifica&ccedil;&atilde;o encontrada nos cards</span>
+                </div>
+
+                <table class="data-table compact">
+                    <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Quantidade</th>
+                        <th>Observa&ccedil;&atilde;o</th>
+                    </tr>
+                    </thead>
+                    <tbody id="typeCountBody"></tbody>
+                </table>
+            </section>
+        </section>
+
+        <section class="panel cards-panel">
             <div class="panel-header">
                 <h2>Cards filtrados</h2>
-                <span><strong id="visibleCards" th:text="${#lists.size(dashboard.cardRows)}">0</strong> cards vis&iacute;veis</span>
+                <span><strong id="visibleCards">0</strong> cards vis&iacute;veis</span>
             </div>
 
             <div class="card-table-wrapper">
@@ -172,294 +184,16 @@
                         <th>Lista</th>
                         <th>Respons&aacute;vel</th>
                         <th>Tipo</th>
+                        <th>&Uacute;ltima atividade</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    <tr class="card-row"
-                        th:each="card : ${dashboard.cardRows}"
-                        th:attr="data-search=${#strings.toLowerCase(card.name + ' ' + card.members + ' ' + card.type + ' ' + card.listName + ' ' + card.labels)},data-person=${card.members},data-list=${card.listName},data-type=${card.type},data-without-owner=${card.withoutOwner}">
-                        <td>
-                            <a th:if="${!#strings.isEmpty(card.url)}" th:href="${card.url}" th:text="${card.name}" target="_blank">Card</a>
-                            <span th:if="${#strings.isEmpty(card.url)}" th:text="${card.name}">Card</span>
-                        </td>
-                        <td th:text="${card.listName}">To Do</td>
-                        <td th:text="${card.members}">Juan</td>
-                        <td th:text="${card.type}">Feature</td>
-                    </tr>
-                    </tbody>
+                    <tbody id="cardRowsBody"></tbody>
                 </table>
             </div>
         </section>
     </section>
 
-    <script>
-        const searchInput = document.getElementById('cardSearch');
-        const personFilter = document.getElementById('personFilter');
-        const listFilter = document.getElementById('listFilter');
-        const typeFilter = document.getElementById('typeFilter');
-        const withoutOwnerFilter = document.getElementById('withoutOwnerFilter');
-        const clearFilters = document.getElementById('clearFilters');
-        const visibleCards = document.getElementById('visibleCards');
-        const workflowGrid = document.getElementById('workflowGrid');
-        const personWorkloadBody = document.getElementById('personWorkloadBody');
-        const typeCountBody = document.getElementById('typeCountBody');
-        const summaryCards = Array.from(document.querySelectorAll('[data-summary]'));
-        const listOrder = Array.from(document.querySelectorAll('.workflow-card')).map(card => card.dataset.list);
-        const rows = Array.from(document.querySelectorAll('.card-row'));
-
-        function normalize(value) {
-            return (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        }
-
-        function splitMembers(value) {
-            return (value || '')
-                .split(',')
-                .map(member => member.trim())
-                .filter(member => member.length > 0);
-        }
-
-        function listGroup(listName) {
-            const value = normalize(listName);
-
-            if (value.includes('backlog')) {
-                return 'backlog';
-            }
-
-            if (value.includes('to do') || value.includes('todo')) {
-                return 'todo';
-            }
-
-            if (value.includes('doing')) {
-                return 'doing';
-            }
-
-            if (value.includes('review')) {
-                return 'review';
-            }
-
-            if (value.includes('done')) {
-                return 'done';
-            }
-
-            return 'other';
-        }
-
-        function workflowNote(listName) {
-            const group = listGroup(listName);
-
-            if (group === 'backlog') {
-                return 'entrada ainda nao priorizada';
-            }
-
-            if (group === 'todo') {
-                return 'selecionado para trabalho';
-            }
-
-            if (group === 'doing') {
-                return 'em execucao agora';
-            }
-
-            if (group === 'review') {
-                return 'aguardando validacao';
-            }
-
-            if (group === 'done') {
-                return 'entregas concluidas';
-            }
-
-            return 'lista importada do Trello';
-        }
-
-        function severityForList(listName) {
-            const group = listGroup(listName);
-
-            if (group === 'doing') {
-                return 'warning';
-            }
-
-            if (group === 'done') {
-                return 'success';
-            }
-
-            return 'neutral';
-        }
-
-        function updateSummary(label, value, note, severity) {
-            const card = summaryCards.find(item => item.dataset.summary === label);
-
-            if (!card) {
-                return;
-            }
-
-            card.className = 'summary-card' + (severity ? ' ' + severity : '');
-            card.querySelector('.summary-value').textContent = value;
-            card.querySelector('.summary-note').textContent = note;
-        }
-
-        function renderWorkflow(filteredRows) {
-            if (!workflowGrid) {
-                return;
-            }
-
-            const counts = new Map();
-            filteredRows.forEach(row => counts.set(row.dataset.list, (counts.get(row.dataset.list) || 0) + 1));
-
-            const names = [...listOrder, ...Array.from(counts.keys()).filter(name => !listOrder.includes(name))];
-            workflowGrid.innerHTML = names
-                .filter(name => counts.has(name))
-                .map(name => `
-                    <article class="workflow-card ${severityForList(name)}" data-list="${escapeHtml(name)}">
-                        <span class="workflow-title">${escapeHtml(name)}</span>
-                        <strong>${counts.get(name)}</strong>
-                        <span>${workflowNote(name)}</span>
-                    </article>
-                `)
-                .join('');
-        }
-
-        function renderPeople(filteredRows) {
-            if (!personWorkloadBody) {
-                return;
-            }
-
-            const people = new Map();
-
-            filteredRows.forEach(row => {
-                splitMembers(row.dataset.person).forEach(member => {
-                    if (!people.has(member)) {
-                        people.set(member, { total: 0, backlog: 0, todo: 0, doing: 0, review: 0, done: 0, types: new Map() });
-                    }
-
-                    const person = people.get(member);
-                    const group = listGroup(row.dataset.list);
-                    person.total++;
-                    person.types.set(row.dataset.type, (person.types.get(row.dataset.type) || 0) + 1);
-
-                    if (group !== 'other') {
-                        person[group]++;
-                    }
-                });
-            });
-
-            const rowsHtml = Array.from(people.entries())
-                .sort((left, right) => right[1].total - left[1].total || left[0].localeCompare(right[0]))
-                .map(([name, person]) => `
-                    <tr>
-                        <td>${escapeHtml(name)}</td>
-                        <td>${person.total}</td>
-                        <td>${person.backlog}</td>
-                        <td>${person.todo}</td>
-                        <td>${person.doing}</td>
-                        <td>${person.review}</td>
-                        <td>${person.done}</td>
-                        <td>${escapeHtml(mainType(person.types))}</td>
-                    </tr>
-                `)
-                .join('');
-
-            personWorkloadBody.innerHTML = rowsHtml || '<tr><td colspan="8">Nenhum card encontrado para o filtro.</td></tr>';
-        }
-
-        function renderTypes(filteredRows) {
-            if (!typeCountBody) {
-                return;
-            }
-
-            const types = new Map();
-            filteredRows.forEach(row => types.set(row.dataset.type, (types.get(row.dataset.type) || 0) + 1));
-
-            const rowsHtml = Array.from(types.entries())
-                .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-                .map(([type, total]) => `
-                    <tr>
-                        <td>${escapeHtml(type)}</td>
-                        <td>${total}</td>
-                        <td>${type === 'Outro' ? 'sem etiqueta de tipo no card' : 'tipo encontrado no Trello'}</td>
-                    </tr>
-                `)
-                .join('');
-
-            typeCountBody.innerHTML = rowsHtml || '<tr><td colspan="3">Nenhum tipo encontrado para o filtro.</td></tr>';
-        }
-
-        function mainType(types) {
-            let selected = 'Sem tipo';
-            let selectedTotal = -1;
-
-            types.forEach((total, type) => {
-                if (total > selectedTotal || (total === selectedTotal && type.localeCompare(selected) < 0)) {
-                    selected = type;
-                    selectedTotal = total;
-                }
-            });
-
-            return selected;
-        }
-
-        function escapeHtml(value) {
-            return (value || '').replace(/[&<>"']/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            }[character]));
-        }
-
-        function applyFilters() {
-            const search = normalize(searchInput.value);
-            const person = personFilter.value;
-            const list = listFilter.value;
-            const type = typeFilter.value;
-            const onlyWithoutOwner = withoutOwnerFilter.checked;
-            let visible = 0;
-            const filteredRows = [];
-
-            rows.forEach(row => {
-                const matchesSearch = !search || normalize(row.dataset.search).includes(search);
-                const matchesPerson = !person || row.dataset.person.includes(person);
-                const matchesList = !list || row.dataset.list === list;
-                const matchesType = !type || row.dataset.type === type;
-                const matchesOwner = !onlyWithoutOwner || row.dataset.withoutOwner === 'true';
-                const show = matchesSearch && matchesPerson && matchesList && matchesType && matchesOwner;
-
-                row.hidden = !show;
-                if (show) {
-                    visible++;
-                    filteredRows.push(row);
-                }
-            });
-
-            if (visibleCards) {
-                visibleCards.textContent = visible;
-            }
-
-            updateSummary('Cards no Trello', visible, 'cards visiveis no filtro', '');
-            updateSummary('Em andamento', filteredRows.filter(row => listGroup(row.dataset.list) === 'doing').length, 'cards em Doing', 'warning');
-            const withoutOwner = filteredRows.filter(row => row.dataset.withoutOwner === 'true').length;
-            updateSummary('Sem responsavel', withoutOwner, 'precisam de triagem', withoutOwner > 0 ? 'danger' : 'success');
-            updateSummary('Entregues', filteredRows.filter(row => listGroup(row.dataset.list) === 'done').length, 'cards em listas Done', 'success');
-            renderWorkflow(filteredRows);
-            renderPeople(filteredRows);
-            renderTypes(filteredRows);
-        }
-
-        [searchInput, personFilter, listFilter, typeFilter, withoutOwnerFilter].forEach(input => {
-            input.addEventListener('input', applyFilters);
-            input.addEventListener('change', applyFilters);
-        });
-
-        clearFilters.addEventListener('click', () => {
-            searchInput.value = '';
-            personFilter.value = '';
-            listFilter.value = '';
-            typeFilter.value = '';
-            withoutOwnerFilter.checked = false;
-            applyFilters();
-        });
-
-        applyFilters();
-    </script>
+    <script src="/js/home-dashboard.js" th:src="@{/js/home-dashboard.js}" defer></script>
 </th:block>
 </body>
 </html>

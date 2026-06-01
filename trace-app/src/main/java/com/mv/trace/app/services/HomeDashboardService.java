@@ -28,17 +28,12 @@ public class HomeDashboardService {
     private static final DateTimeFormatter IMPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ObjectMapper objectMapper;
-    private volatile HomeDashboardView dashboard = emptyDashboard();
 
     public HomeDashboardService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
-    public HomeDashboardView getDashboard() {
-        return dashboard;
-    }
-
-    public void importDashboard(String sourceFile, InputStream inputStream) throws IOException {
+    public HomeDashboardView importDashboard(String sourceFile, InputStream inputStream) throws IOException {
         JsonNode root = objectMapper.readTree(inputStream);
         JsonNode cardsNode = root.path("cards");
 
@@ -50,7 +45,7 @@ public class HomeDashboardService {
         Map<String, String> members = readMembers(root.path("members"));
         List<CardData> cards = readCards(cardsNode, lists, members);
 
-        this.dashboard = buildDashboard(sourceFile, cards, lists);
+        return buildDashboard(sourceFile, cards, lists);
     }
 
     private HomeDashboardView buildDashboard(String sourceFile, List<CardData> cards, Map<String, ListInfo> lists) {
@@ -64,15 +59,15 @@ public class HomeDashboardService {
                 LocalDateTime.now().format(IMPORT_DATE_FORMAT),
                 true,
                 List.of(
-                        new HomeDashboardView.SummaryCard("Cards no Trello", String.valueOf(totalCards), "cards abertos importados", ""),
-                        new HomeDashboardView.SummaryCard("Em andamento", String.valueOf(doingCards), "cards em Doing", "warning"),
-                        new HomeDashboardView.SummaryCard("Sem responsavel", String.valueOf(withoutOwnerCards), "precisam de triagem", withoutOwnerCards > 0 ? "danger" : "success"),
-                        new HomeDashboardView.SummaryCard("Entregues", String.valueOf(doneCards), "cards em listas Done", "success")
+                        new HomeDashboardView.SummaryCard("Total importado", String.valueOf(totalCards), "cards abertos importados", ""),
+                        new HomeDashboardView.SummaryCard("Visiveis no filtro", String.valueOf(totalCards), "cards visiveis agora", ""),
+                        new HomeDashboardView.SummaryCard("Sem responsavel", String.valueOf(withoutOwnerCards), "precisam de triagem", withoutOwnerCards > 0 ? "danger" : "neutral"),
+                        new HomeDashboardView.SummaryCard("Entregues", String.valueOf(doneCards), "cards em Done", "success"),
+                        new HomeDashboardView.SummaryCard("Em andamento", String.valueOf(doingCards), "cards em Doing", "warning")
                 ),
                 workflowColumns(cards, lists),
                 personWorkloads(cards),
                 cardTypeCounts(cards),
-                governanceAlerts(cards, lists),
                 cardRows(cards),
                 personFilters(cards),
                 listFilters(cards, lists),
@@ -153,31 +148,6 @@ public class HomeDashboardService {
                 .sorted(Comparator.comparing(HomeDashboardView.CardTypeCount::total).reversed()
                         .thenComparing(HomeDashboardView.CardTypeCount::name))
                 .toList();
-    }
-
-    private List<HomeDashboardView.GovernanceAlert> governanceAlerts(List<CardData> cards, Map<String, ListInfo> lists) {
-        long withoutOwner = cards.stream().filter(CardData::withoutOwner).count();
-        boolean hasReviewList = lists.values().stream().anyMatch(list -> isReview(list.name()));
-        long reviewCards = cards.stream().filter(card -> isReview(card.listName())).count();
-
-        List<HomeDashboardView.GovernanceAlert> alerts = new ArrayList<>();
-        alerts.add(new HomeDashboardView.GovernanceAlert(
-                "Cards sem responsavel",
-                withoutOwner + " cards ainda nao tem dono claro no Trello.",
-                withoutOwner > 0 ? "danger" : "success",
-                withoutOwner > 0 ? "Definir responsavel antes de puxar para Doing." : "Manter a regra de responsavel obrigatorio."
-        ));
-
-        if (hasReviewList && reviewCards > 0) {
-            alerts.add(new HomeDashboardView.GovernanceAlert(
-                    "Review",
-                    reviewCards + " cards encontrados em Review.",
-                    "warning",
-                    "Validar cards parados em Review."
-            ));
-        }
-
-        return alerts;
     }
 
     private List<HomeDashboardView.CardRow> cardRows(List<CardData> cards) {
@@ -415,33 +385,6 @@ public class HomeDashboardService {
 
     private String normalized(String value) {
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
-    }
-
-    private HomeDashboardView emptyDashboard() {
-        return new HomeDashboardView(
-                "Nenhum arquivo importado",
-                "Aguardando importacao",
-                false,
-                List.of(
-                        new HomeDashboardView.SummaryCard("Cards no Trello", "0", "importe um JSON para iniciar", ""),
-                        new HomeDashboardView.SummaryCard("Em andamento", "0", "sem dados importados", "neutral"),
-                        new HomeDashboardView.SummaryCard("Sem responsavel", "0", "sem dados importados", "neutral"),
-                        new HomeDashboardView.SummaryCard("Entregues", "0", "sem dados importados", "neutral")
-                ),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(new HomeDashboardView.GovernanceAlert(
-                        "Aguardando JSON",
-                        "Importe o export do Trello para montar o painel.",
-                        "neutral",
-                        "Use o botao Importar JSON no topo da tela."
-                )),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of()
-        );
     }
 
     private record ListInfo(String name, double position) {}

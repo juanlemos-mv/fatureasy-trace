@@ -17,6 +17,7 @@
     const activeFilterTitle = document.getElementById('activeFilterTitle');
     const activeFilterChips = document.getElementById('activeFilterChips');
     const sharedIndicator = document.getElementById('sharedIndicator');
+    const archivedIndicator = document.getElementById('archivedIndicator');
     const clearScope = document.getElementById('clearScope');
     const managerClearScope = document.getElementById('managerClearScope');
     const managerScope = document.getElementById('managerScope');
@@ -34,8 +35,10 @@
     const searchInput = document.getElementById('cardSearch');
     const personFilter = document.getElementById('personFilter');
     const listFilter = document.getElementById('listFilter');
-    const typeFilter = document.getElementById('typeFilter');
+    const frontFilter = document.getElementById('frontFilter');
+    const conditionFilter = document.getElementById('conditionFilter');
     const withoutOwnerFilter = document.getElementById('withoutOwnerFilter');
+    const includeArchivedFilter = document.getElementById('includeArchivedFilter');
     const clearFilters = document.getElementById('clearFilters');
     const exportCsv = document.getElementById('exportCsv');
     const visibleCards = document.getElementById('visibleCards');
@@ -77,23 +80,35 @@
         showMessage('Dados locais removidos.', 'success');
     });
 
-    [searchInput, personFilter, listFilter, typeFilter, withoutOwnerFilter].forEach(input => {
+    [searchInput, personFilter, listFilter, frontFilter, conditionFilter, withoutOwnerFilter].forEach(input => {
         input.addEventListener('input', applyFilters);
         input.addEventListener('change', applyFilters);
     });
 
+    includeArchivedFilter.addEventListener('change', () => {
+        populateFilters();
+        renderQuickActions();
+        applyFilters();
+    });
+
     clearFilters.addEventListener('click', () => {
         resetFilters();
+        populateFilters();
+        renderQuickActions();
         applyFilters();
     });
 
     clearScope.addEventListener('click', () => {
         resetFilters();
+        populateFilters();
+        renderQuickActions();
         applyFilters();
     });
 
     managerClearScope.addEventListener('click', () => {
         resetFilters();
+        populateFilters();
+        renderQuickActions();
         applyFilters();
     });
 
@@ -149,12 +164,29 @@
 
         try {
             dashboard = JSON.parse(stored);
+            dashboard = normalizeStoredDashboard(dashboard);
         } catch (error) {
             localStorage.removeItem(STORAGE_KEY);
             dashboard = emptyDashboard();
         }
 
         renderDashboard();
+    }
+
+    function normalizeStoredDashboard(stored) {
+        const cards = Array.isArray(stored.cards) ? stored.cards : [];
+
+        return {
+            ...emptyDashboard(),
+            ...stored,
+            cards: cards.map(card => ({
+                ...card,
+                status: cardStatus(card.listName),
+                front: cardFront(card.name, card.labels || [], card.listName),
+                condition: cardCondition(card.labels || []),
+                type: cardCondition(card.labels || [])
+            }))
+        };
     }
 
     function buildDashboard(data, sourceFile) {
@@ -182,8 +214,9 @@
 
         lists.forEach(list => {
             result.set(list.id, {
-                name: displayListName(list.name || 'Lista sem nome'),
-                position: Number(list.pos || 999999)
+                name: list.name || 'Lista sem nome',
+                position: Number(list.pos || 999999),
+                closed: Boolean(list.closed)
             });
         });
 
@@ -207,39 +240,99 @@
         const owners = Array.isArray(card.idMembers) && card.idMembers.length
             ? card.idMembers.map(id => members.get(id) || id).filter(Boolean)
             : [WITHOUT_OWNER];
-        const list = lists.get(card.idList) || { name: 'Lista nao encontrada' };
+        const list = lists.get(card.idList) || { name: 'Lista nao encontrada', closed: false };
         const name = card.name || 'Card sem titulo';
         const lastActivity = formatDate(card.dateLastActivity);
         const resolvedOwners = owners.length ? owners : [WITHOUT_OWNER];
+        const front = cardFront(name, labels, list.name);
+        const status = cardStatus(list.name);
+        const condition = cardCondition(labels);
 
         return {
             name: name,
             url: card.shortUrl || card.url || '',
             listName: list.name,
+            listClosed: list.closed,
+            status: status,
+            front: front,
+            condition: condition,
             owners: resolvedOwners,
             labels: labels,
-            type: cardType(name, labels),
+            type: condition,
             lastActivity: lastActivity,
             lastActivityRaw: card.dateLastActivity || '',
             withoutOwner: resolvedOwners.length === 1 && resolvedOwners[0] === WITHOUT_OWNER,
-            search: normalize([name, resolvedOwners.join(' '), labels.join(' '), list.name, lastActivity].join(' '))
+            search: normalize([name, resolvedOwners.join(' '), front, condition, status.label, list.name, labels.join(' '), list.closed ? 'arquivado historico' : '', lastActivity].join(' '))
         };
     }
 
-    function cardType(name, labels) {
-        const prefix = prefixFromName(name);
-        const label = labels.length ? labels[0] : 'Outro';
+    function cardFront(name, labels, listName) {
+        const normalizedList = normalize(listName);
 
-        if (!prefix) {
-            return label;
+        if (normalizedList === '[rhp]') {
+            return 'RHP';
         }
 
-        return label === 'Outro' ? prefix : `${prefix} ${label}`;
+        if (normalizedList.includes('sus gateway')) {
+            return 'SusBoot';
+        }
+
+        const text = normalize([name, labels.join(' ')].join(' '));
+
+        if (text.includes('[rhp]') || text.includes(' rhp')) {
+            return 'RHP';
+        }
+
+        if (text.includes('[susboot]') || text.includes('susboot')) {
+            return 'SusBoot';
+        }
+
+        return 'Sem frente';
     }
 
-    function prefixFromName(name) {
-        const match = (name || '').match(/^\[[^\]]+]/);
-        return match ? match[0] : '';
+    function cardStatus(listName) {
+        const group = listGroup(listName);
+        const normalized = normalize(listName);
+
+        if (normalized === '[rhp]') {
+            return { group: 'todo', label: 'To Do' };
+        }
+
+        if (normalized.includes('sus gateway')) {
+            return { group: 'backlog', label: 'Backlog' };
+        }
+
+        return { group: group, label: statusLabel(group, listName) };
+    }
+
+    function statusLabel(group, fallback) {
+        if (group === 'backlog') {
+            return 'Backlog';
+        }
+
+        if (group === 'todo') {
+            return 'To Do';
+        }
+
+        if (group === 'doing') {
+            return 'Doing';
+        }
+
+        if (group === 'review') {
+            return 'Review';
+        }
+
+        if (group === 'done') {
+            return 'Done';
+        }
+
+        return fallback || 'Outro status';
+    }
+
+    function cardCondition(labels) {
+        return labels.some(label => normalize(label) === 'impediment')
+            ? 'Feature impedida'
+            : 'Feature';
     }
 
     function listOrder(cards, lists) {
@@ -258,7 +351,7 @@
 
     function renderDashboard() {
         sourceInfo.textContent = dashboard.imported
-            ? `Fonte atual: ${dashboard.sourceFile} - ${dashboard.importedAt}`
+            ? sourceInfoText()
             : 'Fonte atual: nenhum arquivo importado';
         emptyState.classList.toggle('hidden', dashboard.imported);
         dashboardContent.classList.toggle('hidden', !dashboard.imported);
@@ -270,16 +363,58 @@
         applyFilters();
     }
 
+    function sourceInfoText() {
+        const archived = archivedCardsCount();
+        const suffix = archived > 0
+            ? ` | ${archived} cards em listas arquivadas fora da visao padrao`
+            : '';
+
+        return `Fonte atual: ${dashboard.sourceFile} - ${dashboard.importedAt}${suffix}`;
+    }
+
     function populateFilters() {
-        fillSelect(personFilter, 'Todas as pessoas', unique(dashboard.cards.flatMap(card => card.owners)).sort());
-        fillSelect(listFilter, 'Todas as listas', dashboard.listOrder || []);
-        fillSelect(typeFilter, 'Todos os tipos', unique(dashboard.cards.map(card => card.type)).sort());
+        const cards = visibleSourceCards();
+
+        fillSelect(personFilter, 'Todas as pessoas', unique(cards.flatMap(card => card.owners)).sort());
+        fillSelect(listFilter, 'Todos os status', statusFilterValues(cards));
+        fillSelect(frontFilter, 'Todas as frentes', unique(cards.map(card => card.front || 'Sem frente')).sort(sortFilterTag));
+        fillSelect(conditionFilter, 'Todas as features', ['Feature', 'Feature impedida']);
     }
 
     function fillSelect(select, label, values) {
+        const selected = select.value;
         select.innerHTML = `<option value="">${label}</option>` + values
             .map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
             .join('');
+
+        if (values.includes(selected)) {
+            select.value = selected;
+        }
+    }
+
+    function statusFilterValues(cards) {
+        const order = ['Backlog', 'To Do', 'Doing', 'Review', 'Done'];
+        const available = unique(cards.map(card => card.status.label));
+
+        return order.filter(status => available.includes(status))
+            .concat(available.filter(status => !order.includes(status)).sort());
+    }
+
+    function sortFilterTag(left, right) {
+        const leftPrefix = left.startsWith('[') ? 0 : 1;
+        const rightPrefix = right.startsWith('[') ? 0 : 1;
+
+        return leftPrefix - rightPrefix || left.localeCompare(right);
+    }
+
+    function visibleSourceCards() {
+        return dashboard.cards.filter(card => includeArchivedFilter.checked || !card.listClosed);
+    }
+
+    function sourceCardsNote() {
+        return includeArchivedFilter.checked
+            ? 'inclui listas arquivadas do JSON'
+            : 'somente listas ativas do Trello';
     }
 
     function renderRows() {
@@ -288,13 +423,18 @@
                 data-search="${escapeHtml(card.search)}"
                 data-person="${escapeHtml(card.owners.join(', '))}"
                 data-list="${escapeHtml(card.listName)}"
-                data-type="${escapeHtml(card.type)}"
+                data-list-closed="${card.listClosed}"
+                data-status="${escapeHtml(card.status.label)}"
+                data-status-group="${escapeHtml(card.status.group)}"
+                data-front="${escapeHtml(card.front)}"
+                data-condition="${escapeHtml(card.condition)}"
+                data-type="${escapeHtml(card.condition)}"
                 data-last-activity="${escapeHtml(card.lastActivity || 'Sem data')}"
                 data-without-owner="${card.withoutOwner}">
                 <td>${card.url ? `<a class="card-title" href="${escapeHtml(card.url)}" target="_blank">${escapeHtml(card.name)}</a>` : `<span class="card-title">${escapeHtml(card.name)}</span>`}</td>
-                <td>${escapeHtml(card.listName)}</td>
+                <td>${escapeHtml(card.listName)}${card.listClosed ? ' <span class="table-badge muted">Arquivada</span>' : ''}</td>
                 <td>${escapeHtml(card.owners.join(', '))}</td>
-                <td><span class="table-badge">${escapeHtml(card.type)}</span></td>
+                <td><span class="table-badge">${escapeHtml(card.front)}</span> <span class="table-badge ${card.condition === 'Feature impedida' ? 'warning-badge' : ''}">${escapeHtml(card.condition)}</span></td>
                 <td>${escapeHtml(card.lastActivity || 'Sem data')}</td>
             </tr>
         `).join('');
@@ -304,16 +444,20 @@
         const rows = Array.from(document.querySelectorAll('.card-row'));
         const search = normalize(searchInput.value);
         const person = personFilter.value;
-        const list = listFilter.value;
-        const type = typeFilter.value;
+        const status = listFilter.value;
+        const front = frontFilter.value;
+        const condition = conditionFilter.value;
         const onlyWithoutOwner = withoutOwnerFilter.checked;
+        const includeArchived = includeArchivedFilter.checked;
         const filteredRows = [];
 
         rows.forEach(row => {
             const show = (!search || row.dataset.search.includes(search))
                 && (!person || splitMembers(row.dataset.person).includes(person))
-                && (!list || row.dataset.list === list)
-                && (!type || row.dataset.type === type)
+                && (!status || row.dataset.status === status)
+                && (!front || row.dataset.front === front)
+                && (!condition || row.dataset.condition === condition)
+                && (includeArchived || row.dataset.listClosed !== 'true')
                 && (!onlyWithoutOwner || row.dataset.withoutOwner === 'true');
 
             row.hidden = !show;
@@ -326,15 +470,16 @@
         visibleCards.textContent = filteredRows.length;
 
         const withoutOwner = filteredRows.filter(row => row.dataset.withoutOwner === 'true').length;
-        const doing = filteredRows.filter(row => listGroup(row.dataset.list) === 'doing').length;
-        const done = filteredRows.filter(row => listGroup(row.dataset.list) === 'done').length;
+        const doing = filteredRows.filter(row => row.dataset.statusGroup === 'doing').length;
+        const done = filteredRows.filter(row => row.dataset.statusGroup === 'done').length;
+        const sourceCards = visibleSourceCards();
 
         renderActiveFilters(filteredRows);
-        updateSummary('Total no JSON', dashboard.cards.length, dashboard.imported ? 'cards abertos no arquivo importado' : 'importe um JSON para iniciar', '');
+        updateSummary('Cards no quadro atual', sourceCards.length, dashboard.imported ? sourceCardsNote() : 'importe um JSON para iniciar', '');
         updateSummary('Resultado do filtro', filteredRows.length, dashboard.imported ? 'cards que batem com os filtros atuais' : 'sem dados importados', '');
-        updateSummary('Sem responsavel no filtro', withoutOwner, dashboard.imported ? 'cards filtrados sem dono' : 'sem dados importados', withoutOwner > 0 ? 'danger' : 'neutral');
-        updateSummary('Done no filtro', done, dashboard.imported ? 'cards filtrados em Done' : 'sem dados importados', dashboard.imported ? 'success' : 'neutral');
-        updateSummary('Doing no filtro', doing, dashboard.imported ? 'cards filtrados em Doing' : 'sem dados importados', dashboard.imported ? 'warning' : 'neutral');
+        updateSummary('Sem responsavel', withoutOwner, dashboard.imported ? 'cards do recorte sem dono' : 'sem dados importados', withoutOwner > 0 ? 'danger' : 'neutral');
+        updateSummary('Entregues', done, dashboard.imported ? 'cards do recorte na lista Done' : 'sem dados importados', dashboard.imported ? 'success' : 'neutral');
+        updateSummary('Em andamento', doing, dashboard.imported ? 'cards do recorte na lista Doing' : 'sem dados importados', dashboard.imported ? 'warning' : 'neutral');
 
         renderWorkflow(filteredRows);
         renderCharts(filteredRows);
@@ -347,17 +492,18 @@
         activeFilterPanel.classList.toggle('hidden', !dashboard.imported);
 
         if (!dashboard.imported) {
-            activeFilterTitle.textContent = 'Quadro inteiro';
+            activeFilterTitle.textContent = 'Quadro atual';
             activeFilterChips.innerHTML = '';
             return;
         }
 
         const filters = activeFilterItems();
         const shared = countShared(filteredRows);
+        const archived = archivedCardsCount();
 
         activeFilterTitle.textContent = filters.length
             ? 'Filtros aplicados ao painel'
-            : 'Quadro inteiro';
+            : 'Quadro atual';
         activeFilterChips.innerHTML = filters.length
             ? filters.map(filter => `
                 <span class="filter-chip">
@@ -371,6 +517,12 @@
             <span>Cards em conjunto</span>
             <strong>${shared}</strong>
             <small>no recorte atual</small>
+        `;
+        archivedIndicator.classList.toggle('active', archived > 0);
+        archivedIndicator.innerHTML = `
+            <span>Historico arquivado</span>
+            <strong>${archived}</strong>
+            <small>${includeArchivedFilter.checked ? 'incluido na visao' : 'fora da visao padrao'}</small>
         `;
     }
 
@@ -386,22 +538,32 @@
         }
 
         if (listFilter.value) {
-            filters.push({ label: 'Lista', value: listFilter.value });
+            filters.push({ label: 'Status', value: listFilter.value });
         }
 
-        if (typeFilter.value) {
-            filters.push({ label: 'Tipo', value: typeFilter.value });
+        if (frontFilter.value) {
+            filters.push({ label: 'Frente', value: frontFilter.value });
+        }
+
+        if (conditionFilter.value) {
+            filters.push({ label: 'Condicao', value: conditionFilter.value });
         }
 
         if (withoutOwnerFilter.checked) {
             filters.push({ label: 'Filtro', value: 'Sem responsavel' });
         }
 
+        if (includeArchivedFilter.checked) {
+            filters.push({ label: 'Historico', value: 'Inclui listas arquivadas' });
+        }
+
         return filters;
     }
 
     function renderQuickActions() {
-        if (!dashboard.imported || !dashboard.cards.length) {
+        const cards = visibleSourceCards();
+
+        if (!dashboard.imported || !cards.length) {
             actionList.innerHTML = '';
             return;
         }
@@ -410,37 +572,43 @@
             {
                 action: 'without-owner',
                 label: 'Sem responsavel no quadro',
-                total: dashboard.cards.filter(card => card.withoutOwner).length,
+                total: cards.filter(card => card.withoutOwner).length,
                 note: 'cards que precisam de dono'
             },
             {
                 action: 'doing',
                 label: 'Doing no quadro',
-                total: dashboard.cards.filter(card => listGroup(card.listName) === 'doing').length,
+                total: cards.filter(card => card.status.group === 'doing').length,
                 note: 'trabalho aberto agora'
             },
             {
                 action: 'backlog',
                 label: 'Backlog no quadro',
-                total: dashboard.cards.filter(card => listGroup(card.listName) === 'backlog').length,
+                total: cards.filter(card => card.status.group === 'backlog').length,
                 note: 'entrada para priorizacao'
             },
             {
                 action: 'rhp',
-                label: '[RHP] no quadro',
-                total: dashboard.cards.filter(card => card.type.includes('[RHP]') || card.name.startsWith('[RHP]')).length,
+                label: 'RHP no quadro',
+                total: cards.filter(card => card.front === 'RHP').length,
                 note: 'cards dessa frente'
             },
             {
-                action: 'no-type',
-                label: 'Sem tipo no quadro',
-                total: dashboard.cards.filter(card => card.type === 'Outro').length,
-                note: 'sem etiqueta de tipo'
+                action: 'susboot',
+                label: 'SusBoot no quadro',
+                total: cards.filter(card => card.front === 'SusBoot').length,
+                note: 'cards dessa frente'
+            },
+            {
+                action: 'impediment',
+                label: 'Impedidas no quadro',
+                total: cards.filter(card => card.condition === 'Feature impedida').length,
+                note: 'features com impedimento'
             }
         ];
 
         actionList.innerHTML = actions.map(action => `
-            <button class="quick-action" type="button" data-action="${action.action}">
+            <button class="quick-action" type="button" data-action="${escapeHtml(action.action)}">
                 <span>${escapeHtml(action.label)}</span>
                 <strong>${action.total}</strong>
                 <small>${escapeHtml(action.note)}</small>
@@ -450,16 +618,15 @@
 
     function renderWorkflow(filteredRows) {
         const counts = new Map();
-        filteredRows.forEach(row => counts.set(row.dataset.list, (counts.get(row.dataset.list) || 0) + 1));
+        filteredRows.forEach(row => counts.set(row.dataset.status, (counts.get(row.dataset.status) || 0) + 1));
 
-        const names = (dashboard.listOrder || [])
-            .filter(name => counts.has(name));
+        const names = orderedStatusNames(counts);
 
         workflowGrid.innerHTML = names.map(name => `
-            <article class="workflow-card ${severityForList(name)}" data-list="${escapeHtml(name)}">
+            <article class="workflow-card ${severityForStatus(name)}" data-list="${escapeHtml(name)}">
                 <span class="workflow-title">${escapeHtml(name)}</span>
                 <strong>${counts.get(name)}</strong>
-                <span>${workflowNote(name)}</span>
+                <span>${workflowNote(statusGroupFromLabel(name))}</span>
             </article>
         `).join('');
     }
@@ -473,7 +640,7 @@
 
     function renderDeliveryGauge(filteredRows) {
         const total = filteredRows.length;
-        const done = filteredRows.filter(row => listGroup(row.dataset.list) === 'done').length;
+        const done = filteredRows.filter(row => row.dataset.statusGroup === 'done').length;
         const percent = total ? Math.round((done / total) * 100) : 0;
 
         deliveryGauge.innerHTML = `
@@ -491,20 +658,50 @@
     }
 
     function renderStageChart(filteredRows) {
-        const stages = [
-            { group: 'backlog', label: 'Backlog', color: 'primary' },
-            { group: 'todo', label: 'To Do', color: 'secondary' },
-            { group: 'doing', label: 'Doing', color: 'warning' },
-            { group: 'review', label: 'Review', color: 'danger' },
-            { group: 'done', label: 'Done', color: 'success' }
-        ];
-        const counts = stages.map(stage => ({
-            ...stage,
-            total: filteredRows.filter(row => listGroup(row.dataset.list) === stage.group).length
-        }));
-        const max = Math.max(...counts.map(stage => stage.total), 1);
+        const counts = new Map();
 
-        stageChart.innerHTML = counts.map(stage => chartBar(stage.label, stage.total, max, stage.color)).join('');
+        filteredRows.forEach(row => {
+            counts.set(row.dataset.status, (counts.get(row.dataset.status) || 0) + 1);
+        });
+
+        const statuses = orderedStatusNames(counts);
+        const max = Math.max(...statuses.map(name => counts.get(name)), 1);
+
+        stageChart.innerHTML = statuses.length
+            ? statuses.map(name => chartBar(name, counts.get(name), max, chartColorForStatus(name))).join('')
+            : emptyChart('Nenhum status no filtro.');
+    }
+
+    function orderedStatusNames(counts) {
+        const order = ['Backlog', 'To Do', 'Doing', 'Review', 'Done'];
+        const ordered = order.filter(name => counts.has(name));
+        const missing = Array.from(counts.keys())
+            .filter(name => !ordered.includes(name))
+            .sort();
+
+        return ordered.concat(missing);
+    }
+
+    function chartColorForStatus(status) {
+        const group = statusGroupFromLabel(status);
+
+        if (group === 'done') {
+            return 'success';
+        }
+
+        if (group === 'doing') {
+            return 'warning';
+        }
+
+        if (group === 'review') {
+            return 'danger';
+        }
+
+        if (group === 'todo') {
+            return 'secondary';
+        }
+
+        return 'primary';
     }
 
     function renderPeopleChart(filteredRows) {
@@ -609,17 +806,15 @@
         filteredRows.forEach(row => {
             splitMembers(row.dataset.person).forEach(member => {
                 if (!people.has(member)) {
-                    people.set(member, { total: 0, backlog: 0, todo: 0, doing: 0, review: 0, done: 0, types: new Map() });
+                    people.set(member, { total: 0, backlog: 0, todo: 0, doing: 0, review: 0, done: 0, other: 0, types: new Map() });
                 }
 
                 const person = people.get(member);
-                const group = listGroup(row.dataset.list);
+                const group = row.dataset.statusGroup;
                 person.total++;
                 person.types.set(row.dataset.type, (person.types.get(row.dataset.type) || 0) + 1);
 
-                if (group !== 'other') {
-                    person[group]++;
-                }
+                person[group === 'other' ? 'other' : group]++;
             });
         });
 
@@ -634,10 +829,11 @@
                     <td>${person.doing}</td>
                     <td>${person.review}</td>
                     <td>${person.done}</td>
+                    <td>${person.other}</td>
                     <td>${escapeHtml(mainType(person.types))}</td>
                 </tr>
             `)
-            .join('') || '<tr><td colspan="8">Nenhum card encontrado para o filtro.</td></tr>';
+            .join('') || '<tr><td colspan="9">Nenhum card encontrado para o filtro.</td></tr>';
     }
 
     function renderTypes(filteredRows) {
@@ -650,7 +846,7 @@
                 <tr>
                     <td>${escapeHtml(type)}</td>
                     <td>${total}</td>
-                    <td>${type === 'Outro' ? 'sem etiqueta de tipo no card' : 'tipo encontrado no Trello'}</td>
+                    <td>${type === 'Feature impedida' ? 'tem etiqueta Impediment' : 'sem impedimento'}</td>
                 </tr>
             `)
             .join('') || '<tr><td colspan="3">Nenhum tipo encontrado para o filtro.</td></tr>';
@@ -662,6 +858,7 @@
         const doing = countByGroup(filteredRows, 'doing');
         const review = countByGroup(filteredRows, 'review');
         const backlog = countByGroup(filteredRows, 'backlog');
+        const other = countByGroup(filteredRows, 'other');
         const withoutOwner = filteredRows.filter(row => row.dataset.withoutOwner === 'true').length;
         const shared = countShared(filteredRows);
         const selectedPerson = selectedManagerPerson();
@@ -681,7 +878,7 @@
         managerBacklog.textContent = backlog;
 
         renderManagerPeople(filteredRows);
-        renderManagerActions({ total, done, pending, doing, review, backlog, withoutOwner, shared, noType: countNoType(filteredRows) });
+        renderManagerActions({ total, done, pending, doing, review, backlog, other, withoutOwner, shared, impediments: countNoType(filteredRows) });
         renderManagerFronts(filteredRows);
     }
 
@@ -699,7 +896,7 @@
                 }
 
                 const person = people.get(member);
-                const group = listGroup(row.dataset.list);
+                const group = row.dataset.statusGroup;
                 person.total++;
 
                 if (rowMembers.length > 1) {
@@ -758,6 +955,10 @@
             actions.push(managerAction('Priorizar backlog', counters.backlog, 'cards filtrados ainda estao aguardando priorizacao.', 'neutral'));
         }
 
+        if (counters.other > 0) {
+            actions.push(managerAction('Status fora do padrao', counters.other, 'cards filtrados estao fora dos status operacionais conhecidos.', 'neutral'));
+        }
+
         if (counters.review > 0) {
             actions.push(managerAction('Destravar review', counters.review, 'cards filtrados aguardam validacao.', 'warning'));
         }
@@ -766,8 +967,8 @@
             actions.push(managerAction('Acompanhar execucao', counters.doing, 'cards filtrados estao em andamento.', 'warning'));
         }
 
-        if (counters.noType > 0) {
-            actions.push(managerAction('Classificar tipo', counters.noType, 'cards filtrados estao sem tipo claro.', 'neutral'));
+        if (counters.impediments > 0) {
+            actions.push(managerAction('Remover impedimentos', counters.impediments, 'features filtradas possuem etiqueta Impediment.', 'danger'));
         }
 
         if (!actions.length && counters.total > 0) {
@@ -791,8 +992,7 @@
         const fronts = new Map();
 
         filteredRows.forEach(row => {
-            const title = row.querySelector('.card-title').textContent;
-            const front = prefixFromName(title) || prefixFromName(row.dataset.type) || 'Sem frente';
+            const front = row.dataset.front || 'Sem frente';
 
             if (!fronts.has(front)) {
                 fronts.set(front, { total: 0, done: 0 });
@@ -801,7 +1001,7 @@
             const counter = fronts.get(front);
             counter.total++;
 
-            if (listGroup(row.dataset.list) === 'done') {
+            if (row.dataset.statusGroup === 'done') {
                 counter.done++;
             }
         });
@@ -844,8 +1044,10 @@
         searchInput.value = '';
         personFilter.value = '';
         listFilter.value = '';
-        typeFilter.value = '';
+        frontFilter.value = '';
+        conditionFilter.value = '';
         withoutOwnerFilter.checked = false;
+        includeArchivedFilter.checked = false;
     }
 
     function setManagerMode(active) {
@@ -880,31 +1082,26 @@
         }
 
         if (action === 'doing') {
-            selectFirstListByGroup('doing');
+            listFilter.value = 'Doing';
         }
 
         if (action === 'backlog') {
-            selectFirstListByGroup('backlog');
+            listFilter.value = 'Backlog';
         }
 
         if (action === 'rhp') {
-            searchInput.value = '[RHP]';
+            frontFilter.value = 'RHP';
         }
 
-        if (action === 'no-type') {
-            typeFilter.value = 'Outro';
+        if (action === 'susboot') {
+            frontFilter.value = 'SusBoot';
+        }
+
+        if (action === 'impediment') {
+            conditionFilter.value = 'Feature impedida';
         }
 
         applyFilters();
-    }
-
-    function selectFirstListByGroup(group) {
-        const option = Array.from(listFilter.options)
-            .find(item => item.value && listGroup(item.value) === group);
-
-        if (option) {
-            listFilter.value = option.value;
-        }
     }
 
     function exportFilteredCsv() {
@@ -950,19 +1147,19 @@
             return 'backlog';
         }
 
-        if (value.includes('to do') || value.includes('todo')) {
+        if (value.includes('to do') || value.includes('todo') || value.includes('a fazer')) {
             return 'todo';
         }
 
-        if (value.includes('doing')) {
+        if (value.includes('doing') || value.includes('em andamento') || value.includes('execucao')) {
             return 'doing';
         }
 
-        if (value.includes('review')) {
+        if (value.includes('review') || value.includes('revisao') || value.includes('validacao')) {
             return 'review';
         }
 
-        if (value.includes('done')) {
+        if (value.includes('done') || value.includes('concluido') || value.includes('entregue') || value.includes('finalizado')) {
             return 'done';
         }
 
@@ -970,15 +1167,19 @@
     }
 
     function countByGroup(rows, group) {
-        return rows.filter(row => listGroup(row.dataset.list) === group).length;
+        return rows.filter(row => row.dataset.statusGroup === group).length;
     }
 
     function countNoType(rows) {
-        return rows.filter(row => row.dataset.type === 'Outro').length;
+        return rows.filter(row => row.dataset.condition === 'Feature impedida').length;
     }
 
     function countShared(rows) {
         return rows.filter(row => splitMembers(row.dataset.person).length > 1).length;
+    }
+
+    function archivedCardsCount() {
+        return dashboard.cards.filter(card => card.listClosed).length;
     }
 
     function deliveryPercent(done, total) {
@@ -1000,16 +1201,26 @@
             filters.push(`lista ${listFilter.value}`);
         }
 
-        if (typeFilter.value) {
-            filters.push(`tipo ${typeFilter.value}`);
+        if (frontFilter.value) {
+            filters.push(`frente ${frontFilter.value}`);
+        }
+
+        if (conditionFilter.value) {
+            filters.push(`condicao ${conditionFilter.value}`);
         }
 
         if (withoutOwnerFilter.checked) {
             filters.push('sem responsavel');
         }
 
+        if (includeArchivedFilter.checked) {
+            filters.push('historico arquivado incluido');
+        }
+
         if (!filters.length) {
-            return `${total} cards abertos do JSON importado.`;
+            return includeArchivedFilter.checked
+                ? `${total} cards do quadro atual e do historico arquivado.`
+                : `${total} cards no quadro atual do Trello.`;
         }
 
         const text = `${total} cards encontrados com ${filters.join(', ')}.`;
@@ -1038,9 +1249,7 @@
         return people.length === 1 ? people[0] : '';
     }
 
-    function workflowNote(listName) {
-        const group = listGroup(listName);
-
+    function workflowNote(group) {
         if (group === 'backlog') {
             return 'entrada ainda nao priorizada';
         }
@@ -1061,19 +1270,19 @@
             return 'entregas concluidas';
         }
 
-        return 'lista importada do Trello';
+        return 'status importado do Trello';
     }
 
-    function severityForList(listName) {
-        return listGroup(listName) === 'doing'
+    function severityForStatus(status) {
+        return statusGroupFromLabel(status) === 'doing'
             ? 'warning'
-            : listGroup(listName) === 'done'
+            : statusGroupFromLabel(status) === 'done'
                 ? 'success'
                 : 'neutral';
     }
 
-    function displayListName(listName) {
-        return listGroup(listName) === 'done' ? 'Done' : listName;
+    function statusGroupFromLabel(status) {
+        return listGroup(status);
     }
 
     function splitMembers(value) {
@@ -1084,7 +1293,7 @@
     }
 
     function mainType(types) {
-        let selected = 'Sem tipo';
+        let selected = 'Feature';
         let selectedTotal = -1;
 
         types.forEach((total, type) => {

@@ -36,14 +36,21 @@
             <option value="">Todas as pessoas</option>
         </select>
         <select id="listFilter" class="filter-input">
-            <option value="">Todas as listas</option>
+            <option value="">Todos os status</option>
         </select>
-        <select id="typeFilter" class="filter-input">
-            <option value="">Todos os tipos</option>
+        <select id="frontFilter" class="filter-input">
+            <option value="">Todas as frentes</option>
+        </select>
+        <select id="conditionFilter" class="filter-input">
+            <option value="">Todas as features</option>
         </select>
         <label class="checkbox-filter">
             <input id="withoutOwnerFilter" type="checkbox">
             Sem responsavel
+        </label>
+        <label class="checkbox-filter">
+            <input id="includeArchivedFilter" type="checkbox">
+            Incluir historico arquivado
         </label>
         <button id="clearFilters" class="secondary-button" type="button">Limpar filtros</button>
         <button id="exportCsv" class="secondary-button" type="button">Exportar CSV</button>
@@ -52,7 +59,7 @@
     <section id="activeFilterPanel" class="active-filter-panel hidden">
         <div>
             <span class="section-kicker">Recorte atual</span>
-            <h2 id="activeFilterTitle">Quadro inteiro</h2>
+            <h2 id="activeFilterTitle">Quadro atual</h2>
             <div id="activeFilterChips" class="filter-chip-list"></div>
         </div>
         <div class="active-filter-actions">
@@ -61,13 +68,18 @@
                 <strong>0</strong>
                 <small>no recorte atual</small>
             </div>
-            <button id="clearScope" class="secondary-button" type="button">Voltar ao quadro inteiro</button>
+            <div id="archivedIndicator" class="shared-indicator">
+                <span>Historico arquivado</span>
+                <strong>0</strong>
+                <small>fora da visao padrao</small>
+            </div>
+            <button id="clearScope" class="secondary-button" type="button">Voltar ao quadro atual</button>
         </div>
     </section>
 
     <section class="summary-grid">
-        <article class="summary-card" data-summary="Total no JSON">
-            <span class="summary-label">Total no JSON</span>
+        <article class="summary-card" data-summary="Cards no quadro atual">
+            <span class="summary-label">Cards no quadro atual</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">importe um JSON para iniciar</span>
         </article>
@@ -76,18 +88,18 @@
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
-        <article class="summary-card neutral" data-summary="Sem responsavel no filtro">
-            <span class="summary-label">Sem responsavel no filtro</span>
+        <article class="summary-card neutral" data-summary="Sem responsavel">
+            <span class="summary-label">Sem responsavel</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
-        <article class="summary-card neutral" data-summary="Done no filtro">
-            <span class="summary-label">Done no filtro</span>
+        <article class="summary-card neutral" data-summary="Entregues">
+            <span class="summary-label">Entregues</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
-        <article class="summary-card neutral" data-summary="Doing no filtro">
-            <span class="summary-label">Doing no filtro</span>
+        <article class="summary-card neutral" data-summary="Em andamento">
+            <span class="summary-label">Em andamento</span>
             <strong class="summary-value">0</strong>
             <span class="summary-note">sem dados importados</span>
         </article>
@@ -119,7 +131,7 @@
                     <strong id="managerDeliveryPercent">0%</strong>
                     <span>entrega no recorte</span>
                 </div>
-                <button id="managerClearScope" class="secondary-button" type="button">Voltar ao quadro inteiro</button>
+                <button id="managerClearScope" class="secondary-button" type="button">Voltar ao quadro atual</button>
             </section>
 
             <section class="manager-kpi-grid">
@@ -214,7 +226,7 @@
             <section class="action-panel">
                 <div>
                     <span class="section-kicker">Atalhos</span>
-                    <h2>Atalhos do quadro inteiro</h2>
+                    <h2>Atalhos do quadro atual</h2>
                     <p>Esses bot&otilde;es mudam os filtros para voc&ecirc; investigar um recorte.</p>
                 </div>
                 <div id="actionList" class="quick-action-list"></div>
@@ -222,7 +234,7 @@
 
             <section class="section-heading">
                 <span class="section-kicker">Fluxo operacional</span>
-                <h2>Etapas dos cards filtrados</h2>
+                <h2>Listas e etapas dos cards filtrados</h2>
             </section>
 
             <section id="workflowGrid" class="workflow-grid"></section>
@@ -239,7 +251,7 @@
                 <section class="panel chart-panel">
                     <div class="panel-header">
                         <h2>Fluxo dos cards filtrados</h2>
-                        <span>Distribui&ccedil;&atilde;o por etapa</span>
+                        <span>Distribui&ccedil;&atilde;o por lista/etapa</span>
                     </div>
                     <div id="stageChart" class="bar-chart"></div>
                 </section>
@@ -278,7 +290,8 @@
                             <th>Doing</th>
                             <th>Review</th>
                             <th>Done</th>
-                            <th>Tipo principal</th>
+                            <th>Outros status</th>
+                            <th>Condi&ccedil;&atilde;o principal</th>
                         </tr>
                         </thead>
                         <tbody id="personWorkloadBody"></tbody>
@@ -287,14 +300,14 @@
 
                 <section class="panel">
                     <div class="panel-header">
-                        <h2>Tipos de demanda</h2>
-                        <span>Classifica&ccedil;&atilde;o encontrada nos cards</span>
+                        <h2>Condi&ccedil;&atilde;o das features</h2>
+                        <span>Features livres e impedidas</span>
                     </div>
 
                     <table class="data-table compact">
                         <thead>
                         <tr>
-                            <th>Tipo</th>
+                            <th>Condi&ccedil;&atilde;o</th>
                             <th>Quantidade</th>
                             <th>Observa&ccedil;&atilde;o</th>
                         </tr>
@@ -317,7 +330,7 @@
                             <th>Card</th>
                             <th>Lista</th>
                             <th>Respons&aacute;vel</th>
-                            <th>Tipo</th>
+                            <th>Frente / Condi&ccedil;&atilde;o</th>
                             <th>&Uacute;ltima atividade</th>
                         </tr>
                         </thead>

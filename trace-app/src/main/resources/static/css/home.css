@@ -267,6 +267,81 @@
     background: var(--trace-surface-raised);
 }
 
+.multi-filter {
+    position: relative;
+    min-width: 210px;
+}
+
+.multi-filter-toggle {
+    width: 100%;
+    height: 42px;
+    border: 1px solid var(--trace-primary);
+    border-radius: 6px;
+    padding: 0 34px 0 12px;
+    color: var(--trace-text);
+    background: var(--trace-surface-raised);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.multi-filter-toggle::after {
+    content: "";
+    position: absolute;
+    top: 17px;
+    right: 14px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--trace-text-soft);
+    border-bottom: 2px solid var(--trace-text-soft);
+    transform: rotate(45deg);
+}
+
+.multi-filter-options {
+    position: absolute;
+    z-index: 5;
+    top: 48px;
+    left: 0;
+    width: min(360px, 90vw);
+    max-height: 280px;
+    overflow: auto;
+    border: 1px solid var(--trace-primary);
+    border-radius: 6px;
+    padding: 8px;
+    background: var(--trace-surface);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.multi-filter-option {
+    min-height: 34px;
+    border-radius: 4px;
+    padding: 7px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--trace-text);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.multi-filter-option:hover {
+    background: var(--trace-surface-raised);
+}
+
+.multi-filter-option span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.multi-filter-empty {
+    display: block;
+    padding: 10px;
+    color: var(--trace-text-soft);
+    font-size: 13px;
+}
+
 .checkbox-filter {
     min-height: 42px;
     padding: 0 12px;
@@ -876,6 +951,18 @@
     font-weight: 700;
 }
 
+.table-badge.muted {
+    margin-left: 6px;
+    color: var(--trace-text-soft);
+    background: var(--trace-surface-raised);
+}
+
+.table-badge.warning-badge {
+    border-color: var(--trace-warning);
+    color: var(--trace-white);
+    background: rgba(255, 193, 7, 0.18);
+}
+
 .data-table.compact th,
 .data-table.compact td {
     padding: 12px 14px;
@@ -942,7 +1029,12 @@
         flex-direction: column;
     }
 
-    .filter-input {
+    .filter-input,
+    .multi-filter {
+        width: 100%;
+    }
+
+    .multi-filter-options {
         width: 100%;
     }
 

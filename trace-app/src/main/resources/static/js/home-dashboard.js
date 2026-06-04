@@ -37,6 +37,7 @@
     const listFilter = document.getElementById('listFilter');
     const frontFilter = document.getElementById('frontFilter');
     const conditionFilter = document.getElementById('conditionFilter');
+    const readinessFilter = document.getElementById('readinessFilter');
     const withoutOwnerFilter = document.getElementById('withoutOwnerFilter');
     const includeArchivedFilter = document.getElementById('includeArchivedFilter');
     const clearFilters = document.getElementById('clearFilters');
@@ -80,7 +81,7 @@
         showMessage('Dados locais removidos.', 'success');
     });
 
-    [searchInput, personFilter, listFilter, frontFilter, conditionFilter, withoutOwnerFilter].forEach(input => {
+    [searchInput, personFilter, listFilter, frontFilter, conditionFilter, readinessFilter, withoutOwnerFilter].forEach(input => {
         input.addEventListener('input', applyFilters);
         input.addEventListener('change', applyFilters);
     });
@@ -184,6 +185,7 @@
                 status: cardStatus(card.listName),
                 front: cardFront(card.name, card.labels || [], card.listName),
                 condition: cardCondition(card.labels || []),
+                readiness: cardReadiness(card.labels || []),
                 type: cardCondition(card.labels || [])
             }))
         };
@@ -247,6 +249,7 @@
         const front = cardFront(name, labels, list.name);
         const status = cardStatus(list.name);
         const condition = cardCondition(labels);
+        const readiness = cardReadiness(labels);
 
         return {
             name: name,
@@ -256,13 +259,14 @@
             status: status,
             front: front,
             condition: condition,
+            readiness: readiness,
             owners: resolvedOwners,
             labels: labels,
             type: condition,
             lastActivity: lastActivity,
             lastActivityRaw: card.dateLastActivity || '',
             withoutOwner: resolvedOwners.length === 1 && resolvedOwners[0] === WITHOUT_OWNER,
-            search: normalize([name, resolvedOwners.join(' '), front, condition, status.label, list.name, labels.join(' '), list.closed ? 'arquivado historico' : '', lastActivity].join(' '))
+            search: normalize([name, resolvedOwners.join(' '), front, condition, readiness, status.label, list.name, labels.join(' '), list.closed ? 'arquivado historico' : '', lastActivity].join(' '))
         };
     }
 
@@ -335,6 +339,12 @@
             : 'Feature';
     }
 
+    function cardReadiness(labels) {
+        return labels.some(label => normalize(label) === 'ready-for-dev')
+            ? 'Pronto para dev'
+            : 'Nao aprovado ou sem etiqueta';
+    }
+
     function listOrder(cards, lists) {
         const names = Array.from(lists.values())
             .sort((left, right) => left.position - right.position)
@@ -379,6 +389,7 @@
         fillSelect(listFilter, 'Todos os status', statusFilterValues(cards));
         fillSelect(frontFilter, 'Todas as frentes', unique(cards.map(card => card.front || 'Sem frente')).sort(sortFilterTag));
         fillSelect(conditionFilter, 'Todas as features', ['Feature', 'Feature impedida']);
+        fillSelect(readinessFilter, 'Todas as prontidoes', ['Pronto para dev', 'Nao aprovado ou sem etiqueta']);
     }
 
     function fillSelect(select, label, values) {
@@ -428,13 +439,14 @@
                 data-status-group="${escapeHtml(card.status.group)}"
                 data-front="${escapeHtml(card.front)}"
                 data-condition="${escapeHtml(card.condition)}"
+                data-readiness="${escapeHtml(card.readiness)}"
                 data-type="${escapeHtml(card.condition)}"
                 data-last-activity="${escapeHtml(card.lastActivity || 'Sem data')}"
                 data-without-owner="${card.withoutOwner}">
                 <td>${card.url ? `<a class="card-title" href="${escapeHtml(card.url)}" target="_blank">${escapeHtml(card.name)}</a>` : `<span class="card-title">${escapeHtml(card.name)}</span>`}</td>
                 <td>${escapeHtml(card.listName)}${card.listClosed ? ' <span class="table-badge muted">Arquivada</span>' : ''}</td>
                 <td>${escapeHtml(card.owners.join(', '))}</td>
-                <td><span class="table-badge">${escapeHtml(card.front)}</span> <span class="table-badge ${card.condition === 'Feature impedida' ? 'warning-badge' : ''}">${escapeHtml(card.condition)}</span></td>
+                <td><span class="table-badge">${escapeHtml(card.front)}</span> <span class="table-badge ${card.condition === 'Feature impedida' ? 'warning-badge' : ''}">${escapeHtml(card.condition)}</span> <span class="table-badge ${card.readiness === 'Pronto para dev' ? 'success-badge' : 'muted'}">${escapeHtml(card.readiness)}</span></td>
                 <td>${escapeHtml(card.lastActivity || 'Sem data')}</td>
             </tr>
         `).join('');
@@ -447,6 +459,7 @@
         const status = listFilter.value;
         const front = frontFilter.value;
         const condition = conditionFilter.value;
+        const readiness = readinessFilter.value;
         const onlyWithoutOwner = withoutOwnerFilter.checked;
         const includeArchived = includeArchivedFilter.checked;
         const filteredRows = [];
@@ -457,6 +470,7 @@
                 && (!status || row.dataset.status === status)
                 && (!front || row.dataset.front === front)
                 && (!condition || row.dataset.condition === condition)
+                && (!readiness || row.dataset.readiness === readiness)
                 && (includeArchived || row.dataset.listClosed !== 'true')
                 && (!onlyWithoutOwner || row.dataset.withoutOwner === 'true');
 
@@ -549,6 +563,10 @@
             filters.push({ label: 'Condicao', value: conditionFilter.value });
         }
 
+        if (readinessFilter.value) {
+            filters.push({ label: 'Prontidao', value: readinessFilter.value });
+        }
+
         if (withoutOwnerFilter.checked) {
             filters.push({ label: 'Filtro', value: 'Sem responsavel' });
         }
@@ -604,6 +622,12 @@
                 label: 'Impedidas no quadro',
                 total: cards.filter(card => card.condition === 'Feature impedida').length,
                 note: 'features com impedimento'
+            },
+            {
+                action: 'ready-for-dev',
+                label: 'Ready-for-dev no quadro',
+                total: cards.filter(card => card.readiness === 'Pronto para dev').length,
+                note: 'aprovadas para desenvolvimento'
             }
         ];
 
@@ -1046,6 +1070,7 @@
         listFilter.value = '';
         frontFilter.value = '';
         conditionFilter.value = '';
+        readinessFilter.value = '';
         withoutOwnerFilter.checked = false;
         includeArchivedFilter.checked = false;
     }
@@ -1101,6 +1126,10 @@
             conditionFilter.value = 'Feature impedida';
         }
 
+        if (action === 'ready-for-dev') {
+            readinessFilter.value = 'Pronto para dev';
+        }
+
         applyFilters();
     }
 
@@ -1113,12 +1142,13 @@
             return;
         }
 
-        const header = ['Card', 'Lista', 'Responsavel', 'Tipo', 'Ultima atividade'];
+        const header = ['Card', 'Lista', 'Responsavel', 'Tipo', 'Prontidao', 'Ultima atividade'];
         const lines = rows.map(row => [
             row.querySelector('.card-title').textContent,
             row.dataset.list,
             row.dataset.person,
             row.dataset.type,
+            row.dataset.readiness,
             row.dataset.lastActivity || 'Sem data'
         ]);
         const csv = [header].concat(lines)
@@ -1207,6 +1237,10 @@
 
         if (conditionFilter.value) {
             filters.push(`condicao ${conditionFilter.value}`);
+        }
+
+        if (readinessFilter.value) {
+            filters.push(`prontidao ${readinessFilter.value}`);
         }
 
         if (withoutOwnerFilter.checked) {

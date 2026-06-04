@@ -963,6 +963,12 @@
     background: rgba(255, 193, 7, 0.18);
 }
 
+.table-badge.success-badge {
+    border-color: var(--trace-success);
+    color: var(--trace-white);
+    background: rgba(0, 210, 106, 0.18);
+}
+
 .data-table.compact th,
 .data-table.compact td {
     padding: 12px 14px;
